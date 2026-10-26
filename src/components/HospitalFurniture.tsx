@@ -155,6 +155,58 @@ export function HospitalFurniture({ center, type = 'medical' }: HospitalFurnitur
           </mesh>
         </group>
       )}
+
+      {type === 'elevator' && (
+        /* Cụm 3 Thang máy bệnh viện (3 Hospital Elevators) với khung inox và cửa tự động */
+        <group position={[0, 0, 0]}>
+          {[-4.2, 0, 4.2].map((offX, idx) => (
+            <group key={idx} position={[offX, 0, -2.2]}>
+              {/* Buồng thang máy inox xước */}
+              <mesh position={[0, 1.3, 0]} castShadow>
+                <boxGeometry args={[2.4, 2.6, 2.2]} />
+                <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.25} />
+              </mesh>
+              {/* Khung viền cửa thang máy (Elevator Door Frame) */}
+              <mesh position={[0, 1.15, 1.11]}>
+                <boxGeometry args={[1.7, 2.3, 0.06]} />
+                <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.15} />
+              </mesh>
+              {/* 2 Cánh cửa thang inox xẻ rãnh giữa (Automatic Sliding Doors) */}
+              <mesh position={[-0.41, 1.1, 1.13]}>
+                <boxGeometry args={[0.78, 2.15, 0.03]} />
+                <meshStandardMaterial color="#94a3b8" metalness={0.95} roughness={0.2} />
+              </mesh>
+              <mesh position={[0.41, 1.1, 1.13]}>
+                <boxGeometry args={[0.78, 2.15, 0.03]} />
+                <meshStandardMaterial color="#94a3b8" metalness={0.95} roughness={0.2} />
+              </mesh>
+              {/* Rãnh giữa 2 cánh cửa */}
+              <mesh position={[0, 1.1, 1.15]}>
+                <boxGeometry args={[0.02, 2.15, 0.04]} />
+                <meshBasicMaterial color="#0f172a" />
+              </mesh>
+              {/* Bảng nút bấm gọi thang tầng (Call Button Panel) */}
+              <mesh position={[1.0, 1.2, 1.14]}>
+                <boxGeometry args={[0.12, 0.35, 0.04]} />
+                <meshStandardMaterial color="#1e293b" metalness={0.8} />
+              </mesh>
+              <mesh position={[1.0, 1.25, 1.17]}>
+                <boxGeometry args={[0.04, 0.04, 0.01]} />
+                <meshBasicMaterial color="#38bdf8" />
+              </mesh>
+              {/* Màn hình hiển thị số tầng LED trên đỉnh cửa */}
+              <mesh position={[0, 2.15, 1.15]}>
+                <boxGeometry args={[0.5, 0.16, 0.03]} />
+                <meshStandardMaterial color="#020617" />
+              </mesh>
+              <mesh position={[0, 2.15, 1.17]}>
+                <boxGeometry args={[0.3, 0.08, 0.01]} />
+                <meshBasicMaterial color="#22c55e" />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      )}
     </group>
   );
 }

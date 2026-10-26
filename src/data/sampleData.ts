@@ -479,9 +479,13 @@ export const SAMPLE_ROOMS: Room[] = [
     ],
     center: { x: 20.71, z: 23.49 },
     color: '#64748B',
-    type: 'public',
-    doorSides: ['north', 'south'], // Có 2 cửa đôi mở ở phía Bắc và phía Nam khớp 100% bản vẽ 2D
-    description: 'Cầu thang bộ chính, cụm thang máy và sảnh thông tầng (2 cửa Bắc & Nam)',
+    type: 'elevator',
+    // Cửa đôi vào sảnh cầu thang khớp 100% bản vẽ 2D: cửa Bắc (z=19.26) và cửa Nam (z=27.71)
+    doorPositions: [
+      { x: 28.5, z: 19.26 }, // Cửa Bắc mở ra hành lang trên
+      { x: 28.5, z: 27.71 }, // Cửa Nam mở ra hành lang dưới (vị trí ký hiệu cửa trong ảnh)
+    ],
+    description: 'Cầu thang bộ chính, cụm thang máy và sảnh thông tầng',
   },
 
   // ==========================================

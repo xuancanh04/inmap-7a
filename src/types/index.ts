@@ -29,7 +29,7 @@ export interface Room {
   /** Mô tả/ghi chú thêm về phòng */
   description?: string;
   /** Loại phòng */
-  type?: 'office' | 'medical' | 'utility' | 'public' | 'corridor' | 'pharmacy';
+  type?: 'office' | 'medical' | 'utility' | 'public' | 'corridor' | 'pharmacy' | 'elevator';
   /** Có bỏ tường không (không dựng tường bao quanh, chỉ lát sàn và đặt nội thất / ghế chờ) */
   noWall?: boolean;
   /** Hướng mở cửa phòng: 'north' (lên), 'south' (xuống), 'east' (phải), 'west' (trái), hoặc 'none' */
