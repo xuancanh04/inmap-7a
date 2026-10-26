@@ -73,6 +73,10 @@ export const GROUND_FLOOR_ROOMS: Room[] = [
     center: { x: 20.71, z: 23.49 },
     color: '#3B82F6',
     type: 'office',
+    doorPositions: [
+      { x: 28.5, z: 19.26 },
+      { x: 28.5, z: 27.71 },
+    ],
     description: 'Sảnh đón tiếp và phát số thứ tự khám tự động',
   },
   {
@@ -198,6 +202,10 @@ export const FLOOR_2_ROOMS: Room[] = [
     center: { x: 20.71, z: 23.49 },
     color: '#64748B',
     type: 'public',
+    doorPositions: [
+      { x: 28.5, z: 19.26 },
+      { x: 28.5, z: 27.71 },
+    ],
     description: 'Sảnh sinh hoạt chung và tiếp đón người nhà bệnh nhân',
   },
   {
