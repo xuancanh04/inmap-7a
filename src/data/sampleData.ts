@@ -1,0 +1,961 @@
+// ============================================================================
+// InMap 7A — Dữ liệu Toàn Bộ Tầng 1 Bệnh viện Quân y 7A
+// Khớp 100% tất cả các phòng trên bản vẽ anh 2dd.jpg
+// Kích thước bản vẽ: 2129 x 2560 px  →  Kích thước sàn 3D: 40m x 48.1m
+// ============================================================================
+
+import type { Room, NavNode, NavEdge, Floor } from '../types';
+
+// ── Thông tin Tầng ──
+export const SAMPLE_FLOORS: Floor[] = [
+  {
+    id: 0,
+    name: 'Tầng Trệt — Khoa Cấp Cứu, Lễ Tân & Nhà Thuốc',
+    width: 40,
+    depth: 48.1,
+  },
+  {
+    id: 1,
+    name: 'Tầng 1 — Khu Hành Chính & Khám Chuyên Khoa',
+    width: 40,
+    depth: 48.1,
+  },
+  {
+    id: 2,
+    name: 'Tầng 2 — Khu Khám Bệnh & Nội Trú',
+    width: 40,
+    depth: 48.1,
+  },
+];
+
+// ── Danh sách Toàn Bộ Phòng Tầng Trệt (Tầng 0) ──
+export const GROUND_FLOOR_ROOMS: Room[] = [
+  {
+    id: 'g-room-emergency',
+    name: 'Khu Cấp Cứu 24/7 (ICU)',
+    floor: 0,
+    polygon: [
+      { x: 11.42, z: 10.11 },
+      { x: 22.23, z: 10.11 },
+      { x: 22.23, z: 17.15 },
+      { x: 11.42, z: 17.15 },
+    ],
+    center: { x: 16.82, z: 13.63 },
+    color: '#EF4444',
+    type: 'medical',
+    description: 'Khoa Hồi sức cấp cứu và tiếp nhận bệnh nhân khẩn cấp',
+  },
+  {
+    id: 'g-room-pharmacy',
+    name: 'Nhà Thuốc Bệnh Viện',
+    floor: 0,
+    polygon: [
+      { x: 22.26, z: 10.11 },
+      { x: 29.69, z: 10.11 },
+      { x: 29.69, z: 17.15 },
+      { x: 22.26, z: 17.15 },
+    ],
+    center: { x: 25.97, z: 13.63 },
+    color: '#06B6D4',
+    type: 'pharmacy',
+    description: 'Quầy cấp phát thuốc BHYT và viện phí',
+  },
+  {
+    id: 'g-room-reception',
+    name: 'Quầy Lễ Tân & Đăng Ký Khám',
+    floor: 0,
+    polygon: [
+      { x: 11.27, z: 19.26 },
+      { x: 30.16, z: 19.26 },
+      { x: 30.16, z: 27.71 },
+      { x: 11.27, z: 27.71 },
+    ],
+    center: { x: 20.71, z: 23.49 },
+    color: '#3B82F6',
+    type: 'office',
+    description: 'Sảnh đón tiếp và phát số thứ tự khám tự động',
+  },
+  {
+    id: 'g-room-waiting',
+    name: 'Sảnh Chờ Bệnh Nhân',
+    floor: 0,
+    polygon: [
+      { x: 0.47, z: 8.46 },
+      { x: 7.61, z: 8.46 },
+      { x: 7.61, z: 31.38 },
+      { x: 0.47, z: 31.38 },
+    ],
+    center: { x: 4.04, z: 19.92 },
+    color: '#10B981',
+    type: 'public',
+    noWall: true, // Không bọc tường, tạo không gian mở sảnh chờ
+    description: 'Khu vực ghế chờ máy lạnh cho người nhà và bệnh nhân',
+  },
+  {
+    id: 'g-room-xray',
+    name: 'Khoa Chẩn Đoán Hình Ảnh (X-Quang, CT)',
+    floor: 0,
+    polygon: [
+      { x: 11.37, z: 30.25 },
+      { x: 18.6, z: 30.25 },
+      { x: 18.6, z: 38.14 },
+      { x: 11.37, z: 38.14 },
+    ],
+    center: { x: 15.0, z: 34.2 },
+    color: '#8B5CF6',
+    type: 'medical',
+    description: 'Phòng chụp X-quang kỹ thuật số và CT-Scanner 128 lát cắt',
+  },
+  {
+    id: 'g-room-blood',
+    name: 'Phòng Lấy Máu & Xét Nghiệm',
+    floor: 0,
+    polygon: [
+      { x: 18.6, z: 30.25 },
+      { x: 25.93, z: 30.25 },
+      { x: 25.93, z: 38.14 },
+      { x: 18.6, z: 38.14 },
+    ],
+    center: { x: 22.26, z: 34.2 },
+    color: '#8B5CF6',
+    type: 'medical',
+    description: 'Lấy mẫu bệnh phẩm xét nghiệm sinh hóa - vi sinh',
+  },
+  {
+    id: 'g-room-billing',
+    name: 'Quầy Thu Viện Phí & BHYT',
+    floor: 0,
+    polygon: [
+      { x: 0.1, z: 42.6 },
+      { x: 7.89, z: 42.6 },
+      { x: 7.89, z: 47.9 },
+      { x: 0.1, z: 47.9 },
+    ],
+    center: { x: 3.95, z: 45.2 },
+    color: '#F59E0B',
+    type: 'office',
+    description: 'Thu ngân thanh toán viện phí và giải quyết quyền lợi BHYT',
+  },
+  {
+    id: 'g-room-guard',
+    name: 'Phòng Bảo Vệ & Giữ Xe',
+    floor: 0,
+    polygon: [
+      { x: 7.89, z: 42.6 },
+      { x: 11.37, z: 42.6 },
+      { x: 11.37, z: 47.9 },
+      { x: 7.89, z: 47.9 },
+    ],
+    center: { x: 9.63, z: 45.2 },
+    color: '#64748B',
+    type: 'utility',
+    description: 'Trực an ninh trật tự bệnh viện 24/24',
+  },
+];
+
+// ── Danh sách Toàn Bộ Phòng Tầng 2 (Khu Khám Bệnh & Phẫu Thuật Nội Trú) ──
+export const FLOOR_2_ROOMS: Room[] = [
+  {
+    id: 'f2-room-surgery',
+    name: 'Khu Phẫu Thuật Vô Trùng (OR)',
+    floor: 2,
+    polygon: [
+      { x: 11.42, z: 10.11 },
+      { x: 22.23, z: 10.11 },
+      { x: 22.23, z: 17.15 },
+      { x: 11.42, z: 17.15 },
+    ],
+    center: { x: 16.82, z: 13.63 },
+    color: '#06B6D4',
+    type: 'medical',
+    description: 'Phòng mổ áp lực dương tiêu chuẩn quốc tế',
+  },
+  {
+    id: 'f2-room-recovery',
+    name: 'Phòng Hồi Tỉnh Hậu Phẫu',
+    floor: 2,
+    polygon: [
+      { x: 22.26, z: 10.11 },
+      { x: 29.69, z: 10.11 },
+      { x: 29.69, z: 17.15 },
+      { x: 22.26, z: 17.15 },
+    ],
+    center: { x: 25.97, z: 13.63 },
+    color: '#10B981',
+    type: 'medical',
+    description: 'Khu theo dõi chăm sóc đặc biệt sau phẫu thuật',
+  },
+  {
+    id: 'f2-room-lounge',
+    name: 'Sảnh Chờ Nội Trú & Cầu Thang',
+    floor: 2,
+    polygon: [
+      { x: 11.27, z: 19.26 },
+      { x: 30.16, z: 19.26 },
+      { x: 30.16, z: 27.71 },
+      { x: 11.27, z: 27.71 },
+    ],
+    center: { x: 20.71, z: 23.49 },
+    color: '#64748B',
+    type: 'public',
+    description: 'Sảnh sinh hoạt chung và tiếp đón người nhà bệnh nhân',
+  },
+  {
+    id: 'f2-room-vip-ward',
+    name: 'Khu Điều Dưỡng & Phòng Bệnh VIP',
+    floor: 2,
+    polygon: [
+      { x: 0.47, z: 8.46 },
+      { x: 7.61, z: 8.46 },
+      { x: 7.61, z: 31.38 },
+      { x: 0.47, z: 31.38 },
+    ],
+    center: { x: 4.04, z: 19.92 },
+    color: '#3B82F6',
+    type: 'medical',
+    description: 'Dãy phòng bệnh nội trú cao cấp đầy đủ tiện nghi',
+  },
+  {
+    id: 'f2-room-ward-1',
+    name: 'Khoa Ngoại Chấn Thương',
+    floor: 2,
+    polygon: [
+      { x: 11.37, z: 30.25 },
+      { x: 18.6, z: 30.25 },
+      { x: 18.6, z: 38.14 },
+      { x: 11.37, z: 38.14 },
+    ],
+    center: { x: 15.0, z: 34.2 },
+    color: '#EF4444',
+    type: 'medical',
+    description: 'Khoa điều trị phẫu thuật chỉnh hình',
+  },
+  {
+    id: 'f2-room-ward-2',
+    name: 'Khoa Tim Mạch Can Thiệp',
+    floor: 2,
+    polygon: [
+      { x: 18.6, z: 30.25 },
+      { x: 25.93, z: 30.25 },
+      { x: 25.93, z: 38.14 },
+      { x: 18.6, z: 38.14 },
+    ],
+    center: { x: 22.26, z: 34.2 },
+    color: '#EF4444',
+    type: 'medical',
+    description: 'Khoa can thiệp mạch vành và hồi sức tim',
+  },
+  {
+    id: 'f2-room-director',
+    name: 'Ban Giám Đốc Bệnh Viện',
+    floor: 2,
+    polygon: [
+      { x: 18.69, z: 0.1 },
+      { x: 26.02, z: 0.1 },
+      { x: 26.02, z: 7.23 },
+      { x: 18.69, z: 7.23 },
+    ],
+    center: { x: 22.35, z: 3.62 },
+    color: '#F59E0B',
+    type: 'office',
+    description: 'Văn phòng Giám đốc và các Phó Giám đốc viện',
+  },
+];
+
+// ── Danh sách Toàn Bộ Phòng Tầng 1 khớp từng centimet bản vẽ ──
+export const SAMPLE_ROOMS: Room[] = [
+  // ==========================================
+  // DÃY PHÒNG TRÊN CÙNG (TOP ROW: TỪ TRÁI QUA PHẢI)
+  // Hành lang nằm ở phía Nam (z ≈ 8.6), cửa mở về phía Nam
+  // ==========================================
+  {
+    id: 'room-top-1',
+    name: 'Phòng Trực Ban 1',
+    floor: 1,
+    polygon: [
+      { x: 0.1, z: 0.1 },
+      { x: 3.66, z: 0.1 },
+      { x: 3.66, z: 7.23 },
+      { x: 0.1, z: 7.23 },
+    ],
+    center: { x: 1.88, z: 3.62 },
+    color: '#3B82F6',
+    type: 'office',
+    doorSide: 'south',
+    description: 'Phòng trực ban tiếp dân số 1',
+  },
+  {
+    id: 'room-top-2',
+    name: 'Phòng Trực Ban 2',
+    floor: 1,
+    polygon: [
+      { x: 3.66, z: 0.1 },
+      { x: 7.42, z: 0.1 },
+      { x: 7.42, z: 7.23 },
+      { x: 3.66, z: 7.23 },
+    ],
+    center: { x: 5.54, z: 3.62 },
+    color: '#3B82F6',
+    type: 'office',
+    doorSide: 'south',
+    description: 'Phòng trực ban tiếp dân số 2',
+  },
+  {
+    id: 'room-top-3',
+    name: 'Phòng Tài Chính',
+    floor: 1,
+    polygon: [
+      { x: 7.42, z: 0.1 },
+      { x: 11.18, z: 0.1 },
+      { x: 11.18, z: 7.23 },
+      { x: 7.42, z: 7.23 },
+    ],
+    center: { x: 9.3, z: 3.62 },
+    color: '#F59E0B',
+    type: 'office',
+    doorSide: 'south',
+    description: 'Ban tài chính kế toán',
+  },
+  {
+    id: 'room-top-4',
+    name: 'Phòng Kế Hoạch Tổng Hợp',
+    floor: 1,
+    polygon: [
+      { x: 11.18, z: 0.1 },
+      { x: 14.94, z: 0.1 },
+      { x: 14.94, z: 7.23 },
+      { x: 11.18, z: 7.23 },
+    ],
+    center: { x: 13.06, z: 3.62 },
+    color: '#F59E0B',
+    type: 'office',
+    doorSide: 'south',
+    description: 'Ban kế hoạch tổng hợp viện',
+  },
+  {
+    id: 'room-top-5',
+    name: 'Phòng Chính Trị',
+    floor: 1,
+    polygon: [
+      { x: 14.94, z: 0.1 },
+      { x: 18.69, z: 0.1 },
+      { x: 18.69, z: 7.23 },
+      { x: 14.94, z: 7.23 },
+    ],
+    center: { x: 16.82, z: 3.62 },
+    color: '#3B82F6',
+    type: 'office',
+    doorSide: 'south',
+    description: 'Ban chính trị bệnh viện',
+  },
+  {
+    id: 'room-truong-ban',
+    name: 'Phòng Trưởng ban',
+    floor: 1,
+    polygon: [
+      { x: 18.69, z: 0.1 },
+      { x: 22.36, z: 0.1 },
+      { x: 22.36, z: 7.23 },
+      { x: 18.69, z: 7.23 },
+    ],
+    center: { x: 20.53, z: 3.62 },
+    color: '#6366F1',
+    type: 'office',
+    doorSide: 'south',
+    description: 'Phòng làm việc Trưởng ban chỉ huy',
+  },
+  {
+    id: 'room-ky-thuat',
+    name: 'Phòng Kỹ thuật',
+    floor: 1,
+    polygon: [
+      { x: 22.36, z: 0.1 },
+      { x: 26.02, z: 0.1 },
+      { x: 26.02, z: 7.23 },
+      { x: 22.36, z: 7.23 },
+    ],
+    center: { x: 24.19, z: 3.62 },
+    color: '#8B5CF6',
+    type: 'utility',
+    doorSide: 'south',
+    description: 'Phòng kỹ thuật thiết bị y tế & hạ tầng',
+  },
+  {
+    id: 'room-wc-nam',
+    name: 'WC Nam',
+    floor: 1,
+    polygon: [
+      { x: 26.02, z: 0.1 },
+      { x: 29.69, z: 0.1 },
+      { x: 29.69, z: 3.57 },
+      { x: 26.02, z: 3.57 },
+    ],
+    center: { x: 27.85, z: 1.78 },
+    color: '#06B6D4',
+    type: 'public',
+    doorSide: 'east', // Ký hiệu tam giác cửa mở sang phía Đông (bên phải)
+    description: 'Nhà vệ sinh nam',
+  },
+  {
+    id: 'room-wc-nu',
+    name: 'WC Nữ',
+    floor: 1,
+    polygon: [
+      { x: 26.02, z: 3.57 },
+      { x: 29.69, z: 3.57 },
+      { x: 29.69, z: 7.23 },
+      { x: 26.02, z: 7.23 },
+    ],
+    center: { x: 27.85, z: 5.4 },
+    color: '#EC4899',
+    type: 'public',
+    doorSide: 'east', // Ký hiệu tam giác cửa mở sang phía Đông (bên phải)
+    description: 'Nhà vệ sinh nữ',
+  },
+  {
+    id: 'room-cau-thang-tren-phai',
+    name: 'Cầu Thang Bộ 1',
+    floor: 1,
+    polygon: [
+      { x: 32.5, z: 0.1 },
+      { x: 39.9, z: 0.1 },
+      { x: 39.9, z: 7.23 },
+      { x: 32.5, z: 7.23 },
+    ],
+    center: { x: 36.2, z: 3.62 },
+    color: '#64748B',
+    type: 'public',
+    doorSide: 'west', // Cửa mở hướng Tây ra hành lang dọc theo ký hiệu bản vẽ
+    description: 'Cầu thang bộ khu Đông Bắc lên tầng 2',
+  },
+
+  // ==========================================
+  // KHU VỰC TRUNG TÂM & BÊN TRÁI
+  // Hành lang chính phía Bắc (z ≈ 8.6) và phía Đông (x ≈ 31)
+  // ==========================================
+  {
+    id: 'room-hanh-chinh',
+    name: 'Phòng Hành chính',
+    floor: 1,
+    polygon: [
+      { x: 11.42, z: 10.11 },
+      { x: 22.23, z: 10.11 },
+      { x: 22.23, z: 17.15 },
+      { x: 11.42, z: 17.15 },
+    ],
+    center: { x: 16.82, z: 13.63 },
+    color: '#3B82F6',
+    type: 'office',
+    doorSide: 'north', // Mở cửa hướng Bắc ra hành lang chính
+    doorCount: 3, // 3 cửa ra vào cho phòng Hành chính
+    description: 'Phòng Hành chính tiếp nhận hồ sơ bệnh viện (3 cửa ra vào)',
+  },
+  {
+    id: 'room-dieu-hanh',
+    name: 'Phòng Điều hành',
+    floor: 1,
+    polygon: [
+      { x: 22.26, z: 10.11 },
+      { x: 29.69, z: 10.11 },
+      { x: 29.69, z: 17.15 },
+      { x: 22.26, z: 17.15 },
+    ],
+    center: { x: 25.97, z: 13.63 },
+    color: '#F59E0B',
+    type: 'office',
+    doorSide: 'north', // Mở cửa hướng Bắc ra hành lang chính
+    doorCount: 2, // 2 cửa ra vào cho phòng Điều hành
+    description: 'Phòng điều hành & quản lý viện (2 cửa ra vào)',
+  },
+  {
+    id: 'room-cau-thang-giua',
+    name: 'Cầu Thang & Thang Máy Trung Tâm',
+    floor: 1,
+    polygon: [
+      { x: 11.27, z: 19.26 },
+      { x: 30.16, z: 19.26 },
+      { x: 30.16, z: 27.71 },
+      { x: 11.27, z: 27.71 },
+    ],
+    center: { x: 20.71, z: 23.49 },
+    color: '#64748B',
+    type: 'public',
+    doorSides: ['north', 'south'], // Có 2 cửa đôi mở ở phía Bắc và phía Nam khớp 100% bản vẽ 2D
+    description: 'Cầu thang bộ chính, cụm thang máy và sảnh thông tầng (2 cửa Bắc & Nam)',
+  },
+
+  // ==========================================
+  // DÃY PHÒNG DỌC CÁNH PHẢI (RIGHT WING: TỪ TRÊN XUỐNG DƯỚI)
+  // Khớp 100% 8 phòng khám chuyên khoa + 1 cầu thang thoát hiểm trên bản vẽ 2D
+  // Mỗi phòng có 1 cửa đôi khớp chính xác từng cung cửa vẽ trên sàn (west wall x = 32.6)
+  // ==========================================
+  {
+    id: 'room-right-1',
+    name: 'Phòng Khám Tai Mũi Họng',
+    floor: 1,
+    polygon: [
+      { x: 32.64, z: 10.15 },
+      { x: 39.95, z: 10.15 },
+      { x: 39.95, z: 13.72 },
+      { x: 32.64, z: 13.72 },
+    ],
+    center: { x: 36.3, z: 11.93 },
+    color: '#10B981',
+    type: 'medical',
+    doorPositions: [{ x: 32.64, z: 11.93 }], // Khớp cung cửa phòng 1 trên bản vẽ 2D
+    description: 'Khám chuyên khoa Tai - Mũi - Họng',
+  },
+  {
+    id: 'room-right-2',
+    name: 'Phòng Khám Mắt',
+    floor: 1,
+    polygon: [
+      { x: 32.64, z: 13.72 },
+      { x: 39.95, z: 13.72 },
+      { x: 39.95, z: 17.1 },
+      { x: 32.64, z: 17.1 },
+    ],
+    center: { x: 36.3, z: 15.41 },
+    color: '#10B981',
+    type: 'medical',
+    doorPositions: [{ x: 32.64, z: 15.41 }], // Khớp cung cửa phòng 2 trên bản vẽ 2D
+    description: 'Khám chuyên khoa Mắt & Đo thị lực',
+  },
+  {
+    id: 'room-right-3',
+    name: 'Phòng Khám Răng Hàm Mặt',
+    floor: 1,
+    polygon: [
+      { x: 32.64, z: 17.1 },
+      { x: 39.95, z: 17.1 },
+      { x: 39.95, z: 20.59 },
+      { x: 32.64, z: 20.59 },
+    ],
+    center: { x: 36.3, z: 18.85 },
+    color: '#10B981',
+    type: 'medical',
+    doorPositions: [{ x: 32.64, z: 18.85 }], // Khớp cung cửa phòng 3 trên bản vẽ 2D
+    description: 'Khám chuyên khoa Răng - Hàm - Mặt',
+  },
+  {
+    id: 'room-right-4',
+    name: 'Phòng Khám Da Liễu',
+    floor: 1,
+    polygon: [
+      { x: 32.64, z: 20.59 },
+      { x: 39.95, z: 20.59 },
+      { x: 39.95, z: 23.84 },
+      { x: 32.64, z: 23.84 },
+    ],
+    center: { x: 36.3, z: 22.23 },
+    color: '#10B981',
+    type: 'medical',
+    doorPositions: [{ x: 32.64, z: 22.23 }], // Khớp cung cửa phòng 4 trên bản vẽ 2D
+    description: 'Khám chuyên khoa Da liễu',
+  },
+  {
+    id: 'room-right-5',
+    name: 'Phòng Khám Nội Tiết',
+    floor: 1,
+    polygon: [
+      { x: 32.64, z: 23.84 },
+      { x: 39.95, z: 23.84 },
+      { x: 39.95, z: 27.41 },
+      { x: 32.64, z: 27.41 },
+    ],
+    center: { x: 36.3, z: 25.63 },
+    color: '#10B981',
+    type: 'medical',
+    doorPositions: [{ x: 32.64, z: 25.63 }], // Khớp cung cửa phòng 5 trên bản vẽ 2D
+    description: 'Khám chuyên khoa Nội tiết & Đái tháo đường',
+  },
+  {
+    id: 'room-right-6',
+    name: 'Phòng Khám Cơ Xương Khớp',
+    floor: 1,
+    polygon: [
+      { x: 32.64, z: 27.41 },
+      { x: 39.95, z: 27.41 },
+      { x: 39.95, z: 30.85 },
+      { x: 32.64, z: 30.85 },
+    ],
+    center: { x: 36.3, z: 29.13 },
+    color: '#10B981',
+    type: 'medical',
+    doorPositions: [{ x: 32.64, z: 29.13 }], // Khớp cung cửa phòng 6 trên bản vẽ 2D
+    description: 'Khám chuyên khoa Cơ xương khớp & Cột sống',
+  },
+  {
+    id: 'room-right-7',
+    name: 'Phòng Tiêm Chủng',
+    floor: 1,
+    polygon: [
+      { x: 32.64, z: 30.85 },
+      { x: 39.95, z: 30.85 },
+      { x: 39.95, z: 34.29 },
+      { x: 32.64, z: 34.29 },
+    ],
+    center: { x: 36.3, z: 32.57 },
+    color: '#06B6D4',
+    type: 'medical',
+    doorPositions: [{ x: 32.64, z: 32.57 }], // Khớp cung cửa phòng 7 trên bản vẽ 2D
+    description: 'Phòng tư vấn và tiêm chủng vắc xin',
+  },
+  {
+    id: 'room-right-8',
+    name: 'Phòng Khám Tổng Quát',
+    floor: 1,
+    polygon: [
+      { x: 32.64, z: 34.29 },
+      { x: 39.95, z: 34.29 },
+      { x: 39.95, z: 40.75 },
+      { x: 32.64, z: 40.75 },
+    ],
+    center: { x: 36.3, z: 37.52 },
+    color: '#10B981',
+    type: 'medical',
+    doorPositions: [{ x: 32.64, z: 36.11 }], // Khớp cung cửa phòng 8 trên bản vẽ 2D
+    description: 'Phòng khám tổng quát và hội chẩn chuyên khoa',
+  },
+  {
+    id: 'room-cau-thang-duoi-phai',
+    name: 'Cầu Thang Bộ 2 (Thoát Hiểm)',
+    floor: 1,
+    polygon: [
+      { x: 32.64, z: 40.75 },
+      { x: 39.95, z: 40.75 },
+      { x: 39.95, z: 47.91 },
+      { x: 32.64, z: 47.91 },
+    ],
+    center: { x: 36.3, z: 44.33 },
+    color: '#64748B',
+    type: 'public',
+    doorPositions: [{ x: 32.64, z: 46.03 }], // Cửa thoát hiểm ở đáy hành lang khớp 100% bản vẽ 2D
+    description: 'Cầu thang bộ thoát hiểm khu Đông Nam',
+  },
+
+  // ==========================================
+  // KHU VỰC PHÍA DƯỚI (BOTTOM SECTION)
+  // Hành lang nằm ở phía Bắc của dãy phòng này (z ≈ 29.0) và nhánh phụ
+  // ==========================================
+  {
+    id: 'room-kham-duoi-1',
+    name: 'Phòng Khám Nội 1',
+    floor: 1,
+    polygon: [
+      { x: 11.37, z: 30.25 },
+      { x: 14.84, z: 30.25 },
+      { x: 14.84, z: 38.14 },
+      { x: 11.37, z: 38.14 },
+    ],
+    center: { x: 13.1, z: 34.2 },
+    color: '#10B981',
+    type: 'medical',
+    doorSide: 'north', // Mở cửa hướng Bắc ra hành lang ngang
+    description: 'Khám nội tim mạch và tiêu hóa',
+  },
+  {
+    id: 'room-kham-duoi-2',
+    name: 'Phòng Khám Nội 2',
+    floor: 1,
+    polygon: [
+      { x: 14.84, z: 30.25 },
+      { x: 18.6, z: 30.25 },
+      { x: 18.6, z: 38.14 },
+      { x: 14.84, z: 38.14 },
+    ],
+    center: { x: 16.72, z: 34.2 },
+    color: '#10B981',
+    type: 'medical',
+    doorSide: 'north', // Mở cửa hướng Bắc ra hành lang ngang
+    description: 'Khám nội hô hấp',
+  },
+  {
+    id: 'room-kham-duoi-3',
+    name: 'Phòng Khám Ngoại',
+    floor: 1,
+    polygon: [
+      { x: 18.6, z: 30.25 },
+      { x: 22.26, z: 30.25 },
+      { x: 22.26, z: 38.14 },
+      { x: 18.6, z: 38.14 },
+    ],
+    center: { x: 20.43, z: 34.2 },
+    color: '#EF4444',
+    type: 'medical',
+    doorSide: 'north', // Mở cửa hướng Bắc ra hành lang ngang
+    description: 'Khám ngoại khoa và xử lý chấn thương',
+  },
+  {
+    id: 'room-kham-duoi-4',
+    name: 'Phòng Siêu Âm',
+    floor: 1,
+    polygon: [
+      { x: 22.26, z: 30.25 },
+      { x: 25.93, z: 30.25 },
+      { x: 25.93, z: 38.14 },
+      { x: 22.26, z: 38.14 },
+    ],
+    center: { x: 24.1, z: 34.2 },
+    color: '#06B6D4',
+    type: 'medical',
+    doorSide: 'north', // Mở cửa hướng Bắc ra hành lang ngang
+    description: 'Chẩn đoán hình ảnh & siêu âm màu 4D',
+  },
+  {
+    id: 'room-sub-duoi-1',
+    name: 'Phòng Xét Nghiệm Máu',
+    floor: 1,
+    polygon: [
+      { x: 25.93, z: 30.25 },
+      { x: 29.59, z: 30.25 },
+      { x: 29.59, z: 34.5 },
+      { x: 25.93, z: 34.5 },
+    ],
+    center: { x: 27.76, z: 32.37 },
+    color: '#8B5CF6',
+    type: 'medical',
+    doorSide: 'west', // Cửa mở hướng Tây ra hành lang dọc theo bản vẽ 2D
+    description: 'Lấy mẫu & xét nghiệm huyết học',
+  },
+  {
+    id: 'room-sub-duoi-2',
+    name: 'Phòng X-Quang',
+    floor: 1,
+    polygon: [
+      { x: 25.93, z: 34.5 },
+      { x: 29.59, z: 34.5 },
+      { x: 29.59, z: 40.96 },
+      { x: 25.93, z: 40.96 },
+    ],
+    center: { x: 27.76, z: 37.73 },
+    color: '#8B5CF6',
+    type: 'medical',
+    doorSide: 'west', // Mở cửa hướng Tây ra hành lang dọc
+    description: 'Chụp X-quang kỹ thuật số',
+  },
+  {
+    id: 'room-sub-duoi-3',
+    name: 'Phòng Điện Tim & Thăm Dò',
+    floor: 1,
+    polygon: [
+      { x: 25.93, z: 40.96 },
+      { x: 29.59, z: 40.96 },
+      { x: 29.59, z: 47.9 },
+      { x: 25.93, z: 47.9 },
+    ],
+    center: { x: 27.76, z: 44.43 },
+    color: '#06B6D4',
+    type: 'medical',
+    doorSide: 'west', // Mở cửa hướng Tây ra hành lang dọc
+    description: 'Điện tâm đồ (ECG) và đo lưu huyết não',
+  },
+  {
+    id: 'room-trung-tam-du-lieu',
+    name: 'Trung Tâm Dữ Liệu',
+    floor: 1,
+    polygon: [
+      { x: 0.1, z: 42.6 },
+      { x: 7.89, z: 42.6 },
+      { x: 7.89, z: 47.9 },
+      { x: 0.1, z: 47.9 },
+    ],
+    center: { x: 3.95, z: 45.2 },
+    color: '#8B5CF6',
+    type: 'utility',
+    doorSide: 'north', // Mở cửa hướng Bắc ra hành lang đáy
+    description: 'Trung tâm máy chủ Server dữ liệu viện',
+  },
+  {
+    id: 'room-kho',
+    name: 'Kho Dược & Vật Tư',
+    floor: 1,
+    polygon: [
+      { x: 7.89, z: 42.6 },
+      { x: 11.37, z: 42.6 },
+      { x: 11.37, z: 47.9 },
+      { x: 7.89, z: 47.9 },
+    ],
+    center: { x: 9.63, z: 45.2 },
+    color: '#F97316',
+    type: 'utility',
+    doorSide: 'north', // Mở cửa hướng Bắc ra hành lang đáy
+    description: 'Kho lưu trữ dược phẩm và vật tư y tế',
+  },
+  {
+    id: 'room-kham-duoi-5',
+    name: 'Phòng Khám Chuyên Khoa 1',
+    floor: 1,
+    polygon: [
+      { x: 11.37, z: 38.14 },
+      { x: 18.6, z: 38.14 },
+      { x: 18.6, z: 45.5 },
+      { x: 11.37, z: 45.5 },
+    ],
+    center: { x: 15.0, z: 41.8 },
+    color: '#10B981',
+    type: 'medical',
+    doorSide: 'north', // Mở cửa hướng Bắc
+    description: 'Phòng khám & tư vấn chuyên khoa số 1',
+  },
+  {
+    id: 'room-kham-duoi-6',
+    name: 'Phòng Khám Chuyên Khoa 2',
+    floor: 1,
+    polygon: [
+      { x: 18.6, z: 38.14 },
+      { x: 25.93, z: 38.14 },
+      { x: 25.93, z: 45.5 },
+      { x: 18.6, z: 45.5 },
+    ],
+    center: { x: 22.26, z: 41.8 },
+    color: '#10B981',
+    type: 'medical',
+    doorSide: 'north', // Mở cửa hướng Bắc
+    description: 'Phòng khám & tư vấn chuyên khoa số 2',
+  },
+];
+
+// ── Mạng lưới nút dẫn đường bao quát toàn bộ tòa nhà ──
+export const SAMPLE_NAV_NODES: NavNode[] = [
+  // ── Nodes Tầng Trệt (Floor 0) ──
+  { id: 'g-n-emergency', position: { x: 16.8, z: 9.6 }, floor: 0, roomId: 'g-room-emergency', label: 'Cửa Khoa Cấp Cứu' },
+  { id: 'g-n-pharmacy', position: { x: 25.9, z: 9.6 }, floor: 0, roomId: 'g-room-pharmacy', label: 'Cửa Nhà Thuốc' },
+  { id: 'g-n-reception', position: { x: 20.7, z: 18.5 }, floor: 0, roomId: 'g-room-reception', label: 'Quầy Lễ Tân' },
+  { id: 'g-n-waiting', position: { x: 8.5, z: 19.9 }, floor: 0, roomId: 'g-room-waiting', label: 'Sảnh Chờ' },
+  { id: 'g-n-xray', position: { x: 15.0, z: 29.5 }, floor: 0, roomId: 'g-room-xray', label: 'Cửa Khoa X-Quang/CT' },
+  { id: 'g-n-blood', position: { x: 22.2, z: 29.5 }, floor: 0, roomId: 'g-room-blood', label: 'Cửa P. Lấy Máu' },
+  { id: 'g-n-billing', position: { x: 4.0, z: 41.8 }, floor: 0, roomId: 'g-room-billing', label: 'Quầy Thu Viện Phí' },
+  { id: 'g-n-guard', position: { x: 9.6, z: 41.8 }, floor: 0, roomId: 'g-room-guard', label: 'Phòng Bảo Vệ' },
+
+  // Hành lang Tầng Trệt
+  { id: 'g-c-top-right', position: { x: 31.0, z: 8.6 }, floor: 0, label: 'Hành lang Trệt Trên-Phải' },
+  { id: 'g-c-mid-right', position: { x: 31.0, z: 18.2 }, floor: 0, label: 'Hành lang Trệt Giữa-Phải' },
+  { id: 'g-c-lower-right', position: { x: 31.0, z: 29.0 }, floor: 0, label: 'Hành lang Trệt Dưới-Phải' },
+  { id: 'g-c-bottom-right', position: { x: 31.0, z: 46.0 }, floor: 0, label: 'Hành lang Trệt Đáy Phải' },
+  { id: 'g-c-top-left', position: { x: 9.5, z: 8.6 }, floor: 0, label: 'Hành lang Trệt Trên-Trái' },
+  { id: 'g-c-mid-left', position: { x: 9.5, z: 18.2 }, floor: 0, label: 'Hành lang Trệt Giữa-Trái' },
+  { id: 'g-c-lower-left', position: { x: 9.5, z: 29.0 }, floor: 0, label: 'Hành lang Trệt Dưới-Trái' },
+  { id: 'g-c-bottom-left', position: { x: 9.5, z: 41.8 }, floor: 0, label: 'Hành lang Trệt Đáy Trái' },
+
+  // ── Nodes Tầng 1 (Floor 1) ──
+  // Dãy văn phòng chỉ huy (phía Bắc)
+  { id: 'n-truc-ban-1', position: { x: 1.9, z: 8.6 }, floor: 1, roomId: 'room-top-1', label: 'Cửa P. Trực Ban 1' },
+  { id: 'n-truc-ban-2', position: { x: 5.5, z: 8.6 }, floor: 1, roomId: 'room-top-2', label: 'Cửa P. Trực Ban 2' },
+  { id: 'n-tai-chinh', position: { x: 9.3, z: 8.6 }, floor: 1, roomId: 'room-top-3', label: 'Cửa P. Tài Chính' },
+  { id: 'n-ke-hoach', position: { x: 13.1, z: 8.6 }, floor: 1, roomId: 'room-top-4', label: 'Cửa P. Kế Hoạch' },
+  { id: 'n-chinh-tri', position: { x: 16.8, z: 8.6 }, floor: 1, roomId: 'room-top-5', label: 'Cửa P. Chính Trị' },
+  { id: 'n-truong-ban', position: { x: 20.5, z: 8.6 }, floor: 1, roomId: 'room-truong-ban', label: 'Cửa P. Trưởng ban' },
+  { id: 'n-ky-thuat', position: { x: 24.2, z: 8.6 }, floor: 1, roomId: 'room-ky-thuat', label: 'Cửa P. Kỹ thuật' },
+  { id: 'n-wc-nam', position: { x: 27.8, z: 8.6 }, floor: 1, roomId: 'room-wc-nam', label: 'Cửa WC Nam' },
+
+  // Khối trung tâm
+  { id: 'n-hanh-chinh', position: { x: 16.8, z: 9.6 }, floor: 1, roomId: 'room-hanh-chinh', label: 'Cửa P. Hành chính' },
+  { id: 'n-dieu-hanh', position: { x: 25.9, z: 9.6 }, floor: 1, roomId: 'room-dieu-hanh', label: 'Cửa P. Điều hành' },
+
+  // Cánh phải (khám chuyên khoa)
+  { id: 'n-tai-mui-hong', position: { x: 31.8, z: 13.5 }, floor: 1, roomId: 'room-right-1', label: 'Cửa P. Tai Mũi Họng' },
+  { id: 'n-mat', position: { x: 31.8, z: 20.2 }, floor: 1, roomId: 'room-right-2', label: 'Cửa P. Mắt' },
+  { id: 'n-rang', position: { x: 31.8, z: 27.0 }, floor: 1, roomId: 'room-right-3', label: 'Cửa P. Răng Hàm Mặt' },
+  { id: 'n-da-lieu', position: { x: 31.8, z: 33.8 }, floor: 1, roomId: 'room-right-4', label: 'Cửa P. Da Liễu' },
+  { id: 'n-tiem-chung', position: { x: 31.8, z: 39.0 }, floor: 1, roomId: 'room-right-5', label: 'Cửa P. Tiêm Chủng' },
+
+  // Cánh dưới (phòng khám nội ngoại & cận lâm sàng)
+  { id: 'n-kham-noi-1', position: { x: 13.1, z: 29.5 }, floor: 1, roomId: 'room-kham-duoi-1', label: 'Cửa P. Khám Nội 1' },
+  { id: 'n-kham-noi-2', position: { x: 16.7, z: 29.5 }, floor: 1, roomId: 'room-kham-duoi-2', label: 'Cửa P. Khám Nội 2' },
+  { id: 'n-kham-ngoai', position: { x: 20.4, z: 29.5 }, floor: 1, roomId: 'room-kham-duoi-3', label: 'Cửa P. Khám Ngoại' },
+  { id: 'n-sieu-am', position: { x: 24.1, z: 29.5 }, floor: 1, roomId: 'room-kham-duoi-4', label: 'Cửa P. Siêu Âm' },
+  { id: 'n-xn-mau', position: { x: 27.8, z: 29.5 }, floor: 1, roomId: 'room-sub-duoi-1', label: 'Cửa P. XN Máu' },
+  { id: 'n-xquang-1', position: { x: 31.8, z: 37.7 }, floor: 1, roomId: 'room-sub-duoi-2', label: 'Cửa P. X-Quang' },
+  { id: 'n-dien-tim', position: { x: 31.8, z: 44.4 }, floor: 1, roomId: 'room-sub-duoi-3', label: 'Cửa P. Điện Tim' },
+
+  // Khu hạ tầng đáy
+  { id: 'n-server', position: { x: 4.0, z: 41.8 }, floor: 1, roomId: 'room-trung-tam-du-lieu', label: 'Cửa TT Dữ liệu' },
+  { id: 'n-kho', position: { x: 9.6, z: 41.8 }, floor: 1, roomId: 'room-kho', label: 'Cửa Kho Dược' },
+
+  // Cửa các phòng khám chuyên khoa mới
+  { id: 'n-kham-ck-1', position: { x: 15.0, z: 37.5 }, floor: 1, roomId: 'room-kham-duoi-5', label: 'Cửa P. Khám Chuyên Khoa 1' },
+  { id: 'n-kham-ck-2', position: { x: 22.3, z: 37.5 }, floor: 1, roomId: 'room-kham-duoi-6', label: 'Cửa P. Khám Chuyên Khoa 2' },
+
+  // Mạng hành lang chính Tầng 1
+  { id: 'c-top-left', position: { x: 9.5, z: 8.6 }, floor: 1, label: 'Ngã rẽ Hành lang Trên-Trái' },
+  { id: 'c-top-right', position: { x: 31.0, z: 8.6 }, floor: 1, label: 'Ngã rẽ Hành lang Trên-Phải' },
+  { id: 'c-mid-left', position: { x: 9.5, z: 18.2 }, floor: 1, label: 'Hành lang Giữa-Trái' },
+  { id: 'c-mid-right', position: { x: 31.0, z: 18.2 }, floor: 1, label: 'Hành lang Giữa-Phải' },
+  { id: 'c-lower-left', position: { x: 9.5, z: 29.0 }, floor: 1, label: 'Hành lang Dưới-Trái' },
+  { id: 'c-lower-right', position: { x: 31.0, z: 29.0 }, floor: 1, label: 'Hành lang Dưới-Phải' },
+  { id: 'c-bottom-right', position: { x: 31.0, z: 46.0 }, floor: 1, label: 'Hành lang Đáy Phải' },
+  { id: 'c-bottom-left', position: { x: 9.5, z: 41.8 }, floor: 1, label: 'Hành lang Đáy Trái' },
+];
+
+export const SAMPLE_NAV_EDGES: NavEdge[] = [
+  // ── Edges Tầng Trệt (Floor 0) ──
+  { from: 'g-c-top-right', to: 'g-c-mid-right', weight: 9.6 },
+  { from: 'g-c-mid-right', to: 'g-c-lower-right', weight: 10.8 },
+  { from: 'g-c-lower-right', to: 'g-c-bottom-right', weight: 17.0 },
+  { from: 'g-c-top-left', to: 'g-c-top-right', weight: 21.5 },
+  { from: 'g-c-mid-left', to: 'g-c-mid-right', weight: 21.5 },
+  { from: 'g-c-lower-left', to: 'g-c-lower-right', weight: 21.5 },
+  { from: 'g-c-top-left', to: 'g-c-mid-left', weight: 9.6 },
+  { from: 'g-c-mid-left', to: 'g-c-lower-left', weight: 10.8 },
+  { from: 'g-c-lower-left', to: 'g-c-bottom-left', weight: 12.8 },
+
+  { from: 'g-n-emergency', to: 'g-c-top-right', weight: 14.2 },
+  { from: 'g-n-pharmacy', to: 'g-c-top-right', weight: 5.2 },
+  { from: 'g-n-reception', to: 'g-c-mid-right', weight: 10.3 },
+  { from: 'g-n-waiting', to: 'g-c-mid-left', weight: 2.0 },
+  { from: 'g-n-xray', to: 'g-c-lower-left', weight: 5.5 },
+  { from: 'g-n-blood', to: 'g-c-lower-right', weight: 8.8 },
+  { from: 'g-n-billing', to: 'g-c-bottom-left', weight: 5.5 },
+  { from: 'g-n-guard', to: 'g-c-bottom-left', weight: 1.0 },
+
+  // ── Edges Tầng 1 (Floor 1) ──
+  // Trục hành lang chính
+  { from: 'c-top-left', to: 'c-top-right', weight: 21.5 },
+  { from: 'c-top-right', to: 'c-mid-right', weight: 9.6 },
+  { from: 'c-mid-right', to: 'c-lower-right', weight: 10.8 },
+  { from: 'c-lower-right', to: 'c-bottom-right', weight: 17.0 },
+  { from: 'c-top-left', to: 'c-mid-left', weight: 9.6 },
+  { from: 'c-mid-left', to: 'c-lower-left', weight: 10.8 },
+  { from: 'c-lower-left', to: 'c-bottom-left', weight: 12.8 },
+  { from: 'c-mid-left', to: 'c-mid-right', weight: 21.5 },
+  { from: 'c-lower-left', to: 'c-lower-right', weight: 21.5 },
+
+  // Cửa dãy phòng trên nối vào hành lang Bắc
+  { from: 'n-truc-ban-1', to: 'c-top-left', weight: 7.6 },
+  { from: 'n-truc-ban-2', to: 'c-top-left', weight: 4.0 },
+  { from: 'n-tai-chinh', to: 'c-top-left', weight: 0.5 },
+  { from: 'n-ke-hoach', to: 'c-top-right', weight: 17.9 },
+  { from: 'n-chinh-tri', to: 'c-top-right', weight: 14.2 },
+  { from: 'n-truong-ban', to: 'c-top-right', weight: 10.5 },
+  { from: 'n-ky-thuat', to: 'c-top-right', weight: 6.8 },
+  { from: 'n-wc-nam', to: 'c-top-right', weight: 3.2 },
+
+  // Cửa phòng trung tâm
+  { from: 'n-hanh-chinh', to: 'c-top-right', weight: 14.2 },
+  { from: 'n-dieu-hanh', to: 'c-top-right', weight: 5.2 },
+
+  // Cửa phòng cánh phải
+  { from: 'n-tai-mui-hong', to: 'c-mid-right', weight: 4.8 },
+  { from: 'n-mat', to: 'c-mid-right', weight: 2.1 },
+  { from: 'n-rang', to: 'c-lower-right', weight: 2.2 },
+  { from: 'n-da-lieu', to: 'c-lower-right', weight: 4.9 },
+  { from: 'n-tiem-chung', to: 'c-bottom-right', weight: 7.0 },
+
+  // Cửa phòng khám dưới
+  { from: 'n-kham-noi-1', to: 'c-lower-left', weight: 3.6 },
+  { from: 'n-kham-noi-2', to: 'c-lower-right', weight: 14.3 },
+  { from: 'n-kham-ngoai', to: 'c-lower-right', weight: 10.6 },
+  { from: 'n-sieu-am', to: 'c-lower-right', weight: 6.9 },
+  { from: 'n-xn-mau', to: 'c-lower-right', weight: 3.2 },
+  { from: 'n-xquang-1', to: 'c-bottom-right', weight: 8.3 },
+  { from: 'n-dien-tim', to: 'c-bottom-right', weight: 1.8 },
+
+  // Cửa phòng khám chuyên khoa mới
+  { from: 'n-kham-ck-1', to: 'c-lower-left', weight: 8.5 },
+  { from: 'n-kham-ck-2', to: 'c-lower-right', weight: 8.5 },
+
+  // Cửa kho & TT dữ liệu
+  { from: 'n-server', to: 'c-bottom-left', weight: 5.5 },
+  { from: 'n-kho', to: 'c-bottom-left', weight: 1.0 },
+];
