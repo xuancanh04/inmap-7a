@@ -490,6 +490,22 @@ export const SAMPLE_ROOMS: Room[] = [
   // Mỗi phòng có 1 cửa đôi khớp chính xác từng cung cửa vẽ trên sàn (west wall x = 32.6)
   // ==========================================
   {
+    id: 'room-right-0',
+    name: 'Phòng Trực Khám / Cấp Cứu Ban Đầu',
+    floor: 1,
+    polygon: [
+      { x: 32.64, z: 7.23 },
+      { x: 39.95, z: 7.23 },
+      { x: 39.95, z: 10.15 },
+      { x: 32.64, z: 10.15 },
+    ],
+    center: { x: 36.3, z: 8.69 },
+    color: '#EF4444',
+    type: 'medical',
+    doorPositions: [{ x: 32.64, z: 8.69 }], // Cửa đôi mở ra hành lang Tây khớp bản vẽ 2D
+    description: 'Phòng tiếp nhận khám ban đầu & xử lý cấp cứu',
+  },
+  {
     id: 'room-right-1',
     name: 'Phòng Khám Tai Mũi Họng',
     floor: 1,
@@ -854,6 +870,7 @@ export const SAMPLE_NAV_NODES: NavNode[] = [
   { id: 'n-dieu-hanh', position: { x: 25.9, z: 9.6 }, floor: 1, roomId: 'room-dieu-hanh', label: 'Cửa P. Điều hành' },
 
   // Cánh phải (khám chuyên khoa)
+  { id: 'n-truc-kham', position: { x: 31.8, z: 8.69 }, floor: 1, roomId: 'room-right-0', label: 'Cửa P. Trực Khám' },
   { id: 'n-tai-mui-hong', position: { x: 31.8, z: 13.5 }, floor: 1, roomId: 'room-right-1', label: 'Cửa P. Tai Mũi Họng' },
   { id: 'n-mat', position: { x: 31.8, z: 20.2 }, floor: 1, roomId: 'room-right-2', label: 'Cửa P. Mắt' },
   { id: 'n-rang', position: { x: 31.8, z: 27.0 }, floor: 1, roomId: 'room-right-3', label: 'Cửa P. Răng Hàm Mặt' },
@@ -936,6 +953,7 @@ export const SAMPLE_NAV_EDGES: NavEdge[] = [
   { from: 'n-dieu-hanh', to: 'c-top-right', weight: 5.2 },
 
   // Cửa phòng cánh phải
+  { from: 'n-truc-kham', to: 'c-top-right', weight: 0.8 },
   { from: 'n-tai-mui-hong', to: 'c-mid-right', weight: 4.8 },
   { from: 'n-mat', to: 'c-mid-right', weight: 2.1 },
   { from: 'n-rang', to: 'c-lower-right', weight: 2.2 },
