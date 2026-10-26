@@ -74,8 +74,8 @@ export const GROUND_FLOOR_ROOMS: Room[] = [
     color: '#3B82F6',
     type: 'office',
     doorPositions: [
-      { x: 28.5, z: 19.26 },
-      { x: 28.5, z: 27.71 },
+      { x: 13.0, z: 19.26 },
+      { x: 13.0, z: 27.71 },
     ],
     description: 'Sảnh đón tiếp và phát số thứ tự khám tự động',
   },
@@ -203,8 +203,8 @@ export const FLOOR_2_ROOMS: Room[] = [
     color: '#64748B',
     type: 'public',
     doorPositions: [
-      { x: 28.5, z: 19.26 },
-      { x: 28.5, z: 27.71 },
+      { x: 13.0, z: 19.26 },
+      { x: 13.0, z: 27.71 },
     ],
     description: 'Sảnh sinh hoạt chung và tiếp đón người nhà bệnh nhân',
   },
@@ -488,10 +488,10 @@ export const SAMPLE_ROOMS: Room[] = [
     center: { x: 20.71, z: 23.49 },
     color: '#64748B',
     type: 'elevator',
-    // Cửa đôi vào sảnh cầu thang khớp 100% bản vẽ 2D: cửa Bắc (z=19.26) và cửa Nam (z=27.71)
+    // Cửa đôi vào sảnh cầu thang khớp 100% bản vẽ 2D: cạnh ngược lại phía Tây
     doorPositions: [
-      { x: 28.5, z: 19.26 }, // Cửa Bắc mở ra hành lang trên
-      { x: 28.5, z: 27.71 }, // Cửa Nam mở ra hành lang dưới (vị trí ký hiệu cửa trong ảnh)
+      { x: 13.0, z: 19.26 }, // Cửa phía Bắc (góc bên trái)
+      { x: 13.0, z: 27.71 }, // Cửa phía Nam (góc bên trái)
     ],
     description: 'Cầu thang bộ chính, cụm thang máy và sảnh thông tầng',
   },
