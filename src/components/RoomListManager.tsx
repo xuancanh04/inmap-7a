@@ -9,7 +9,7 @@ import { calculatePolygonCentroid, calculatePolygonArea } from '../utils/geometr
 import type { Room } from '../types';
 
 /** Nhóm chức năng phòng bệnh viện & màu sắc nhận diện tương ứng */
-export const FUNCTION_GROUPS = [
+const FUNCTION_GROUPS = [
   { id: 'medical', label: 'Y tế / Cấp cứu / Khám', color: '#EF4444', badge: 'bg-red-500/20 text-red-400 border-red-500/30' },
   { id: 'office', label: 'Hành chính / Điều hành', color: '#3B82F6', badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
   { id: 'utility', label: 'Kỹ thuật / Máy chủ / Kho', color: '#8B5CF6', badge: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },

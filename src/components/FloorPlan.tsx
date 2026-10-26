@@ -76,15 +76,22 @@ export function FloorPlan({
   }, [width, depth]);
 
   // ── Load texture bản vẽ 2D ──
-  const texture = useLoader(THREE.TextureLoader, FLOOR_PLAN_IMAGE_URL);
+  const texture = useLoader(THREE.TextureLoader, FLOOR_PLAN_IMAGE_URL, (loader) => {
+    // Cấu hình loader nếu cần
+    loader.crossOrigin = 'anonymous';
+  });
 
-  // Cấu hình texture cho chất lượng cao
+  // Gán thông số texture an toàn
   useMemo(() => {
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.minFilter = THREE.LinearMipmapLinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    texture.anisotropy = 16;
-    texture.generateMipmaps = true;
+    if (!texture) return;
+    Object.assign(texture, {
+      colorSpace: THREE.SRGBColorSpace,
+      minFilter: THREE.LinearMipmapLinearFilter,
+      magFilter: THREE.LinearFilter,
+      anisotropy: 16,
+      generateMipmaps: true,
+      needsUpdate: true,
+    });
   }, [texture]);
 
   // ── Xử lý click trên mặt sàn ──
