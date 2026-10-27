@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+  <defs>
+    <!-- Gradient nền đỏ quân đội sang trọng -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#DC2626"/>
+      <stop offset="100%" stop-color="#991B1B"/>
+    </linearGradient>
+
+    <!-- Gradient viền vàng đồng quân đội -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047"/>
+      <stop offset="50%" stop-color="#EAB308"/>
+      <stop offset="100%" stop-color="#CA8A04"/>
+    </linearGradient>
+
+    <!-- Đổ bóng nổi bật -->
+    <filter id="dropShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Vòng tròn nền chính -->
+  <circle cx="60" cy="60" r="56" fill="url(#bgGrad)" stroke="url(#goldGrad)" stroke-width="4" filter="url(#dropShadow)"/>
+
+  <!-- Vòng chỉ vàng nét đứt tinh tế bên trong -->
+  <circle cx="60" cy="60" r="50" fill="none" stroke="#FEF08A" stroke-width="1.2" stroke-dasharray="3,2" opacity="0.85"/>
+
+  <!-- Ngôi sao vàng 5 cánh Quân đội Nhân dân Việt Nam trên đỉnh -->
+  <polygon points="60,18 63.5,27.5 73.5,28 65.5,34.5 68.5,44 60,38.5 51.5,44 54.5,34.5 46.5,28 56.5,27.5" fill="url(#goldGrad)" stroke="#78350F" stroke-width="0.5"/>
+
+  <!-- Biểu tượng chữ thập đỏ ngành Y tế viền trắng sắc nét -->
+  <g transform="translate(60, 68)" filter="url(#dropShadow)">
+    <!-- Viền trắng dày tạo tương phản -->
+    <path d="M-8,-26 H8 V-8 H26 V8 H8 V26 H-8 V8 H-26 V-8 H-8 Z" fill="#FFFFFF"/>
+    <!-- Chữ thập đỏ chuẩn y tế -->
+    <path d="M-6,-24 H6 V-6 H24 V6 H6 V24 H-6 V6 H-24 V-6 H-6 Z" fill="#DC2626"/>
+
+    <!-- Biểu tượng số "7A" danh dự ở trung tâm chữ thập -->
+    <text x="0" y="4.5" font-family="'Inter', 'Arial Black', sans-serif" font-size="12" font-weight="900" fill="#FDE047" text-anchor="middle" letter-spacing="-0.5">7A</text>
+  </g>
+
+  <!-- Dải cành nguyệt quế / bông lúa vàng bảo bọc hai bên tượng trưng cho vinh quang chiến thắng -->
+  <!-- Nhánh trái -->
+  <path d="M22,72 Q18,50 30,36" fill="none" stroke="url(#goldGrad)" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="20" cy="66" r="2.2" fill="url(#goldGrad)"/>
+  <circle cx="21" cy="54" r="2.2" fill="url(#goldGrad)"/>
+  <circle cx="25" cy="44" r="2.2" fill="url(#goldGrad)"/>
+
+  <!-- Nhánh phải -->
+  <path d="M98,72 Q102,50 90,36" fill="none" stroke="url(#goldGrad)" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="100" cy="66" r="2.2" fill="url(#goldGrad)"/>
+  <circle cx="99" cy="54" r="2.2" fill="url(#goldGrad)"/>
+  <circle cx="95" cy="44" r="2.2" fill="url(#goldGrad)"/>
+
+  <!-- Dải băng chữ danh xưng "QUÂN Y 7A" uốn chân logo -->
+  <path d="M30,95 Q60,105 90,95" fill="none" stroke="url(#goldGrad)" stroke-width="8" stroke-linecap="round" opacity="0.3"/>
+  <text x="60" y="104" font-family="'Inter', 'Arial', sans-serif" font-size="9.5" font-weight="900" fill="#FEF08A" text-anchor="middle" letter-spacing="1.2">QUÂN Y 7A</text>
+</svg>

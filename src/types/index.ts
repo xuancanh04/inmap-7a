@@ -81,3 +81,25 @@ export interface NavigationState {
   /** Đường đi đã tìm được (mảng ID nodes theo thứ tự) */
   path: string[];
 }
+
+/** Thông tin thiết bị phần cứng BLE Beacon */
+export interface BeaconDevice {
+  id: string;
+  name: string;
+  uuid: string;
+  major: number;
+  minor: number;
+  macAddress?: string;
+  txPower: number; // Mức RSSI tham chiếu ở 1m (mặc định -59 dBm)
+  position: Point2D; // Tọa độ (x, z) gắn trên sàn/trần
+  floor: number;
+  color?: string;
+  active?: boolean;
+}
+
+/** Dữ liệu nhận diện được từ quét sóng BLE */
+export interface BleScanReading {
+  minor: number;
+  rssi: number;
+  distance: number;
+}

@@ -4,6 +4,8 @@
 // ============================================================================
 
 import { useMemo } from 'react';
+import * as THREE from 'three';
+import { useLoader } from '@react-three/fiber';
 import type { PolygonVertex, Point2D } from '../types';
 
 interface HospitalWallMeshProps {
@@ -12,6 +14,7 @@ interface HospitalWallMeshProps {
   wallThickness?: number;
   doorWidth?: number;
   color?: string;
+  roomName?: string;
   hasDoor?: boolean;
   doorSide?: 'north' | 'south' | 'east' | 'west' | 'none' | 'auto';
   doorSides?: ('north' | 'south' | 'east' | 'west')[];
@@ -30,7 +33,6 @@ export function HospitalWallMesh({
   wallHeight = 2.8,
   wallThickness = 0.22,
   doorWidth = 1.4,
-  color = '#ffffff',
   hasDoor = true,
   doorSide = 'auto',
   doorSides,
@@ -260,6 +262,22 @@ export function HospitalWallMesh({
     return segments;
   }, [polygon, wallHeight, wallThickness, doorWidth, hasDoor, doorSide, doorSides, doorCount, doorPositions, center]);
 
+  // Load logo bệnh viện để gắn biển hiệu lên tường phòng
+  const logoTexture = useLoader(THREE.TextureLoader, '/logo.png');
+
+  // Tìm đoạn tường đặc dài nhất để gắn biển hiệu logo Bệnh Viện Quân Y 7A
+  const longestSolidSeg = useMemo(() => {
+    let maxLen = 0;
+    let bestSeg: typeof wallSegments[0] | null = null;
+    for (const seg of wallSegments) {
+      if (!seg.isHeader && seg.size[0] > maxLen) {
+        maxLen = seg.size[0];
+        bestSeg = seg;
+      }
+    }
+    return maxLen >= 3.5 ? bestSeg : null;
+  }, [wallSegments]);
+
   return (
     <group name="hospital-walls">
       {wallSegments.map((seg, idx) => (
@@ -268,38 +286,113 @@ export function HospitalWallMesh({
           position={seg.center}
           rotation={[0, seg.rotationY, 0]}
         >
-          {/* Tường thạch cao y tế chuyên dụng */}
+          {/* Tường thạch cao y tế chuyên dụng: Đồng bộ 1 màu trắng ngọc thanh lịch, tối giản */}
           <mesh castShadow receiveShadow>
             <boxGeometry args={seg.size} />
             <meshStandardMaterial
               color="#f8fafc"
-              roughness={0.4}
-              metalness={0.05}
+              roughness={0.3}
+              metalness={0.04}
             />
           </mesh>
 
-          {/* Viền nẹp chân tường (Chỉ có ở chân tường đặc, không có ở dầm cửa trên cao) */}
+          {/* Viền nẹp chân tường nhôm xước y tế sang trọng (đồng bộ màu xám thanh nhã) */}
           {!seg.isHeader && (
-            <mesh position={[0, -seg.size[1] / 2 + 0.06, 0]}>
-              <boxGeometry args={[seg.size[0], 0.12, seg.size[2] + 0.02]} />
-              <meshStandardMaterial color="#64748b" roughness={0.6} />
-            </mesh>
-          )}
-
-          {/* Dải chỉ màu nhận diện khoa phòng ở giữa tường */}
-          {!seg.isHeader && (
-            <mesh position={[0, 0.1, 0]}>
-              <boxGeometry args={[seg.size[0], 0.08, seg.size[2] + 0.01]} />
+            <mesh position={[0, -seg.size[1] / 2 + 0.08, 0]}>
+              <boxGeometry args={[seg.size[0], 0.16, seg.size[2] + 0.02]} />
               <meshStandardMaterial
-                color={color}
-                roughness={0.2}
-                emissive={color}
-                emissiveIntensity={0.2}
+                color="#64748b"
+                roughness={0.4}
+                metalness={0.3}
               />
             </mesh>
           )}
+
+          {/* Phào chỉ viền đỉnh tường giúp phân tách hình khối kiến trúc */}
+          {!seg.isHeader && (
+            <mesh position={[0, seg.size[1] / 2 - 0.04, 0]}>
+              <boxGeometry args={[seg.size[0] + 0.02, 0.08, seg.size[2] + 0.02]} />
+              <meshStandardMaterial color="#e2e8f0" roughness={0.4} metalness={0.1} />
+            </mesh>
+          )}
+
+          {/* ── CÁNH CỬA & KHUNG CỬA 3D THẬT DƯỚI DẦM CỬA ── */}
+          {seg.isHeader && (
+            <group position={[0, -seg.size[1] / 2 - 1.05, 0]}>
+              {/* Khung bao cửa nhôm xingfa xám cao cấp */}
+              <mesh position={[-seg.size[0] / 2 + 0.04, 0, 0]}>
+                <boxGeometry args={[0.08, 2.1, seg.size[2] + 0.02]} />
+                <meshStandardMaterial color="#334155" roughness={0.3} metalness={0.6} />
+              </mesh>
+              <mesh position={[seg.size[0] / 2 - 0.04, 0, 0]}>
+                <boxGeometry args={[0.08, 2.1, seg.size[2] + 0.02]} />
+                <meshStandardMaterial color="#334155" roughness={0.3} metalness={0.6} />
+              </mesh>
+              <mesh position={[0, 1.01, 0]}>
+                <boxGeometry args={[seg.size[0], 0.08, seg.size[2] + 0.02]} />
+                <meshStandardMaterial color="#334155" roughness={0.3} metalness={0.6} />
+              </mesh>
+
+              {/* Cánh cửa phòng bệnh viện gỗ sồi sáng viền kính hé mở nhẹ (30 độ) tạo cảm giác đón tiếp */}
+              <group position={[-seg.size[0] / 2 + 0.08, 0, 0]} rotation={[0, 0.45, 0]}>
+                {/* Khung cánh cửa */}
+                <mesh position={[(seg.size[0] - 0.16) / 2, 0, 0]}>
+                  <boxGeometry args={[seg.size[0] - 0.16, 2.02, 0.05]} />
+                  <meshStandardMaterial
+                    color="#e2e8f0"
+                    roughness={0.35}
+                    metalness={0.1}
+                  />
+                </mesh>
+                {/* Ô kính quan sát y tế ở giữa cửa */}
+                <mesh position={[(seg.size[0] - 0.16) / 2, 0.35, 0]}>
+                  <boxGeometry args={[seg.size[0] * 0.45, 0.7, 0.06]} />
+                  <meshStandardMaterial
+                    color="#bae6fd"
+                    transparent
+                    opacity={0.6}
+                    roughness={0.1}
+                    metalness={0.9}
+                  />
+                </mesh>
+                {/* Tay nắm cửa gạt Inox 304 sang trọng */}
+                <mesh position={[seg.size[0] - 0.3, -0.05, 0.04]} rotation={[0, 0, Math.PI / 2]}>
+                  <cylinderGeometry args={[0.015, 0.015, 0.14]} />
+                  <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.1} />
+                </mesh>
+              </group>
+            </group>
+          )}
         </group>
       ))}
+
+      {/* ── Biển hiệu Logo Bệnh Viện Quân Y 7A ốp trên mảng tường lớn ── */}
+      {longestSolidSeg && (
+        <group
+          position={[
+            longestSolidSeg.center[0],
+            wallHeight * 0.65,
+            longestSolidSeg.center[2],
+          ]}
+          rotation={[0, longestSolidSeg.rotationY, 0]}
+        >
+          {/* Khung biển hiệu màu trắng nổi bật */}
+          <mesh position={[0, 0, longestSolidSeg.size[2] / 2 + 0.02]}>
+            <boxGeometry args={[1.5, 0.65, 0.03]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.2} metalness={0.1} />
+          </mesh>
+          {/* Mặt logo in sắc nét có đèn nền hắt */}
+          <mesh position={[0, 0, longestSolidSeg.size[2] / 2 + 0.038]}>
+            <planeGeometry args={[1.35, 0.52]} />
+            <meshBasicMaterial map={logoTexture} transparent side={THREE.DoubleSide} />
+          </mesh>
+          {/* Viền kim loại mạ crom sáng bóng quanh biển */}
+          <mesh position={[0, 0, longestSolidSeg.size[2] / 2 + 0.015]}>
+            <boxGeometry args={[1.56, 0.71, 0.02]} />
+            <meshStandardMaterial color="#38bdf8" roughness={0.1} metalness={0.9} />
+          </mesh>
+        </group>
+      )}
     </group>
   );
 }

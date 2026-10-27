@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { MapCanvas } from './components/MapCanvas';
 import { UIPanel } from './components/UIPanel';
 import { CoordHUD } from './components/CoordHUD';
@@ -11,15 +11,15 @@ import {
   FLOOR_2_ROOMS,
   SAMPLE_NAV_NODES,
   SAMPLE_NAV_EDGES,
+  SAMPLE_BEACONS,
 } from './data/sampleData';
 
 function App() {
   const setRooms = useMapStore((s) => s.setRooms);
   const setNavData = useMapStore((s) => s.setNavData);
+  const setBeacons = useMapStore((s) => s.setBeacons);
   const setUserPosition = useMapStore((s) => s.setUserPosition);
-  const adminMode = useMapStore((s) => s.adminMode);
   const toggleAdminMode = useMapStore((s) => s.toggleAdminMode);
-  const builderMode = useMapStore((s) => s.builderMode);
   const toggleBuilderMode = useMapStore((s) => s.toggleBuilderMode);
   const building3DMode = useMapStore((s) => s.building3DMode);
   const toggleBuilding3DMode = useMapStore((s) => s.toggleBuilding3DMode);
@@ -29,11 +29,12 @@ function App() {
     useMapStore.setState({ floors: SAMPLE_FLOORS });
     setRooms([...GROUND_FLOOR_ROOMS, ...SAMPLE_ROOMS, ...FLOOR_2_ROOMS]);
     setNavData(SAMPLE_NAV_NODES, SAMPLE_NAV_EDGES);
+    setBeacons(SAMPLE_BEACONS);
     setUserPosition({ x: 20, z: 24 });
-  }, [setRooms, setNavData, setUserPosition]);
+  }, [setRooms, setNavData, setBeacons, setUserPosition]);
 
-  // Phím tắt:
-  // - Ctrl+Shift+A: Toggle Admin Mode
+  // Phím tắt dành cho quản trị / kỹ thuật:
+  // - Ctrl+Shift+A: Toggle Admin HUD Tọa độ
   // - Ctrl+Shift+B: Toggle 3D Room Builder
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -50,14 +51,6 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleAdminMode, toggleBuilderMode]);
 
-  const handleToggleAdmin = useCallback(() => {
-    toggleAdminMode();
-  }, [toggleAdminMode]);
-
-  const handleToggleBuilder = useCallback(() => {
-    toggleBuilderMode();
-  }, [toggleBuilderMode]);
-
   return (
     <div style={styles.appContainer}>
       {/* ── Canvas 3D chiếm toàn màn hình ── */}
@@ -72,9 +65,8 @@ function App() {
       {/* ── Bảng quản lý phòng & Batch 3D Extruder + Export JSON ── */}
       <RoomListManager />
 
-      {/* ── Nhóm nút chế độ góc trên phải ── */}
-      <div style={styles.topRightControls}>
-        {/* Nút Toàn Cảnh Tòa Nhà 3 Tầng */}
+      {/* ── Nút chế độ góc trên phải: Xem toàn cảnh tòa nhà 3 tầng ── */}
+      <div className="top-right-mobile" style={styles.topRightControls}>
         <button
           onClick={toggleBuilding3DMode}
           style={{
@@ -86,36 +78,170 @@ function App() {
           <span>🏢</span>
           <span>{building3DMode ? 'Toàn nhà 3D: BẬT' : 'Xem 1 tầng'}</span>
         </button>
-
-        {/* Nút 3D Room Builder */}
-        <button
-          onClick={handleToggleBuilder}
-          style={{
-            ...styles.controlBtn,
-            ...(builderMode ? styles.builderToggleActive : {}),
-          }}
-          title="Bật/Tắt Visual 3D Room Builder (Ctrl+Shift+B)"
-        >
-          <span>🏗️</span>
-          <span>{builderMode ? 'Dựng phòng: BẬT' : 'Dựng phòng 3D'}</span>
-        </button>
-
-        {/* Nút Admin Tool */}
-        <button
-          onClick={handleToggleAdmin}
-          style={{
-            ...styles.controlBtn,
-            ...(adminMode ? styles.adminToggleActive : {}),
-          }}
-          title="Bật/Tắt Admin Tool — Click lấy tọa độ (Ctrl+Shift+A)"
-        >
-          <span>{adminMode ? '📐' : '🔧'}</span>
-          <span>{adminMode ? 'Admin: BẬT' : 'Lấy tọa độ'}</span>
-        </button>
       </div>
+
+      {/* ── Thanh điều khiển Dẫn đường Nổi (Floating Bar) hiển thị ngay khi có lộ trình ── */}
+      <FloatingNavActions />
     </div>
   );
 }
+
+/**
+ * Component thanh điều khiển nổi bật ngay trên màn hình khi đang tìm đường
+ */
+/**
+ * Component thanh điều khiển nổi bật ngay trên màn hình khi đang tìm đường
+ * Chuẩn Google Maps:
+ * - Hiển thị khoảng cách còn lại (mét)
+ * - Nút "Định vị bước đi thật" (kích hoạt đếm bước chân bằng gia tốc kế + la bàn số)
+ * - Nút "Mô phỏng" (tự động bước đi)
+ */
+function FloatingNavActions() {
+  const path = useMapStore((s) => s.navigation.path);
+  const navNodes = useMapStore((s) => s.navNodes);
+  const userPosition = useMapStore((s) => s.userPosition);
+  const isSimulatingWalk = useMapStore((s) => s.isSimulatingWalk);
+  const startSimulationWalk = useMapStore((s) => s.startSimulationWalk);
+  const stopSimulationWalk = useMapStore((s) => s.stopSimulationWalk);
+  const [isRealTracking, setIsRealTracking] = useState(false);
+  const [trackingMsg, setTrackingMsg] = useState('');
+
+  // Tính khoảng cách còn lại tới đích (mét)
+  const remainingMeters = useMemo(() => {
+    if (path.length < 2 || !userPosition) return 0;
+    const nodeMap = new Map(navNodes.map((n) => [n.id, n]));
+    const destNode = nodeMap.get(path[path.length - 1]);
+    if (!destNode) return 0;
+    const dist = Math.hypot(destNode.position.x - userPosition.x, destNode.position.z - userPosition.z);
+    return Math.round(dist * 1.2); // Quy đổi tọa độ sang mét thực tế
+  }, [path, navNodes, userPosition]);
+
+  if (path.length < 2) return null;
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 20,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 6,
+        maxWidth: '92vw',
+      }}
+    >
+      {/* Banner chỉ đường xanh Google Maps */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
+          color: '#ffffff',
+          padding: '10px 18px',
+          borderRadius: 24,
+          boxShadow: '0 8px 30px rgba(30, 58, 138, 0.5)',
+          border: '1px solid rgba(147, 197, 253, 0.4)',
+          backdropFilter: 'blur(12px)',
+        }}
+      >
+        <span style={{ fontSize: 20 }}>⬆️</span>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>
+            {remainingMeters > 3 ? `Còn khoảng ${remainingMeters}m nữa tới nơi` : '🎉 Bạn đã đến trước cửa phòng!'}
+          </span>
+          <span style={{ fontSize: 11, color: '#bfdbfe' }}>
+            {isRealTracking ? '🟢 Đang định vị bước chân & la bàn thật' : 'Đi dọc hành lang theo vạch xanh'}
+          </span>
+        </div>
+      </div>
+
+      {/* Thanh nút bấm điều khiển */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 8,
+          background: 'rgba(15, 23, 42, 0.92)',
+          padding: '6px 12px',
+          borderRadius: 25,
+          border: '1px solid rgba(56, 189, 248, 0.35)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+        }}
+      >
+        {/* Nút bật cảm biến bước đi thật ngoài đời */}
+        <button
+          type="button"
+          onClick={async () => {
+            const { startRealWalkTracking, stopRealWalkTracking } = await import('./utils/pedometerTracking');
+            if (isRealTracking) {
+              stopRealWalkTracking();
+              setIsRealTracking(false);
+              setTrackingMsg('');
+            } else {
+              const ok = await startRealWalkTracking((msg) => setTrackingMsg(msg));
+              if (ok) setIsRealTracking(true);
+            }
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            background: isRealTracking
+              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+              : 'rgba(56, 189, 248, 0.18)',
+            color: isRealTracking ? '#ffffff' : '#38bdf8',
+            border: isRealTracking ? 'none' : '1px solid rgba(56, 189, 248, 0.4)',
+            padding: '7px 14px',
+            borderRadius: 18,
+            fontWeight: 700,
+            fontSize: 12,
+            cursor: 'pointer',
+          }}
+        >
+          <span>{isRealTracking ? '🟢 Đang đo bước thật' : '🚶 Bật đi thật'}</span>
+        </button>
+
+        {/* Nút mô phỏng tự động */}
+        <button
+          type="button"
+          onClick={() => {
+            if (isSimulatingWalk) {
+              stopSimulationWalk();
+            } else {
+              startSimulationWalk();
+            }
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            background: isSimulatingWalk ? '#ef4444' : 'rgba(255, 255, 255, 0.08)',
+            color: '#ffffff',
+            border: 'none',
+            padding: '7px 14px',
+            borderRadius: 18,
+            fontWeight: 600,
+            fontSize: 12,
+            cursor: 'pointer',
+          }}
+        >
+          <span>{isSimulatingWalk ? '⏸ Dừng' : '▶ Đi thử'}</span>
+        </button>
+      </div>
+
+      {trackingMsg && (
+        <div style={{ fontSize: 11, color: '#38bdf8', background: 'rgba(0,0,0,0.7)', padding: '3px 10px', borderRadius: 12 }}>
+          {trackingMsg}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 
 const styles: Record<string, React.CSSProperties> = {
   appContainer: {

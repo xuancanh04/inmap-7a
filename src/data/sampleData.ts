@@ -4,7 +4,74 @@
 // Kích thước bản vẽ: 2129 x 2560 px  →  Kích thước sàn 3D: 40m x 48.1m
 // ============================================================================
 
-import type { Room, NavNode, NavEdge, Floor } from '../types';
+import type { Room, NavNode, NavEdge, Floor, BeaconDevice } from '../types';
+
+// ============================================================================
+// CẤU HÌNH BỘ 5 DFRobot Gravity BLE Sensor Beacon (TEL0149)
+// Tọa độ gắn thực tế phân bố tại 5 ngã rẽ và vị trí huyết mạch Tầng 1
+// ============================================================================
+export const SAMPLE_BEACONS: BeaconDevice[] = [
+  {
+    id: 'beacon-01',
+    name: 'Beacon 1 — Sảnh Hành Lang Bắc (P. Hành Chính)',
+    uuid: 'FDA50693-A4E2-4FB1-AFCF-C6EB07647825',
+    major: 10001,
+    minor: 1,
+    txPower: -59,
+    position: { x: 20.7, z: 8.6 }, // Ngay giữa hành lang Bắc
+    floor: 1,
+    color: '#3B82F6',
+    active: true,
+  },
+  {
+    id: 'beacon-02',
+    name: 'Beacon 2 — Cụm Thang Máy & Cầu Thang Trung Tâm',
+    uuid: 'FDA50693-A4E2-4FB1-AFCF-C6EB07647825',
+    major: 10001,
+    minor: 2,
+    txPower: -59,
+    position: { x: 20.7, z: 23.5 }, // Tâm sảnh thang máy
+    floor: 1,
+    color: '#8B5CF6',
+    active: true,
+  },
+  {
+    id: 'beacon-03',
+    name: 'Beacon 3 — Ngã Ba Hành Lang Khám Chuyên Khoa (Phía Đông)',
+    uuid: 'FDA50693-A4E2-4FB1-AFCF-C6EB07647825',
+    major: 10001,
+    minor: 3,
+    txPower: -59,
+    position: { x: 31.0, z: 18.2 }, // Hành lang dọc đón các phòng khám Tai Mũi Họng, Mắt, Răng
+    floor: 1,
+    color: '#10B981',
+    active: true,
+  },
+  {
+    id: 'beacon-04',
+    name: 'Beacon 4 — Ngã Rẽ Hành Lang Khám Nội & Cận Lâm Sàng',
+    uuid: 'FDA50693-A4E2-4FB1-AFCF-C6EB07647825',
+    major: 10001,
+    minor: 4,
+    txPower: -59,
+    position: { x: 20.4, z: 29.0 }, // Hành lang ngang phía dưới
+    floor: 1,
+    color: '#F59E0B',
+    active: true,
+  },
+  {
+    id: 'beacon-05',
+    name: 'Beacon 5 — Khu Vực Cấp Cứu Ban Đầu & Cầu Thang Bộ 1',
+    uuid: 'FDA50693-A4E2-4FB1-AFCF-C6EB07647825',
+    major: 10001,
+    minor: 5,
+    txPower: -59,
+    position: { x: 32.0, z: 8.6 }, // Ngã rẽ góc Đông Bắc
+    floor: 1,
+    color: '#EF4444',
+    active: true,
+  },
+];
 
 // ── Thông tin Tầng ──
 export const SAMPLE_FLOORS: Floor[] = [
@@ -743,7 +810,7 @@ export const SAMPLE_ROOMS: Room[] = [
     center: { x: 27.76, z: 32.37 },
     color: '#8B5CF6',
     type: 'medical',
-    doorSide: 'west', // Cửa mở hướng Tây ra hành lang dọc theo bản vẽ 2D
+    doorSide: 'east', // Mở cửa hướng Đông ra hành lang dọc có đường dẫn màu xanh
     description: 'Lấy mẫu & xét nghiệm huyết học',
   },
   {
@@ -759,7 +826,7 @@ export const SAMPLE_ROOMS: Room[] = [
     center: { x: 27.76, z: 37.73 },
     color: '#8B5CF6',
     type: 'medical',
-    doorSide: 'west', // Mở cửa hướng Tây ra hành lang dọc
+    doorSide: 'east', // Mở cửa hướng Đông ra hành lang dọc có đường dẫn màu xanh
     description: 'Chụp X-quang kỹ thuật số',
   },
   {
@@ -769,13 +836,13 @@ export const SAMPLE_ROOMS: Room[] = [
     polygon: [
       { x: 25.93, z: 40.96 },
       { x: 29.59, z: 40.96 },
-      { x: 29.59, z: 47.9 },
-      { x: 25.93, z: 47.9 },
+      { x: 29.59, z: 45.5 },
+      { x: 25.93, z: 45.5 },
     ],
-    center: { x: 27.76, z: 44.43 },
+    center: { x: 27.76, z: 43.23 },
     color: '#06B6D4',
     type: 'medical',
-    doorSide: 'west', // Mở cửa hướng Tây ra hành lang dọc
+    doorSide: 'east', // Mở cửa hướng Đông ra hành lang dọc có đường dẫn màu xanh
     description: 'Điện tâm đồ (ECG) và đo lưu huyết não',
   },
   {
@@ -823,7 +890,7 @@ export const SAMPLE_ROOMS: Room[] = [
     center: { x: 15.0, z: 41.8 },
     color: '#10B981',
     type: 'medical',
-    doorSide: 'north', // Mở cửa hướng Bắc
+    doorSide: 'south', // Cửa mở hướng Nam ra hành lang đáy đi vào
     description: 'Phòng khám & tư vấn chuyên khoa số 1',
   },
   {
@@ -839,7 +906,7 @@ export const SAMPLE_ROOMS: Room[] = [
     center: { x: 22.26, z: 41.8 },
     color: '#10B981',
     type: 'medical',
-    doorSide: 'north', // Mở cửa hướng Bắc
+    doorSide: 'south', // Cửa mở hướng Nam ra hành lang đáy đi vào
     description: 'Phòng khám & tư vấn chuyên khoa số 2',
   },
 ];

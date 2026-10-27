@@ -4,7 +4,7 @@
 // ============================================================================
 
 import { create } from 'zustand';
-import type { Room, NavNode, NavEdge, NavigationState, Point2D, Floor } from '../types';
+import type { Room, NavNode, NavEdge, NavigationState, Point2D, Floor, BeaconDevice } from '../types';
 import { findShortestPath } from '../utils/pathfinding';
 
 export interface MapStoreState {
@@ -15,12 +15,20 @@ export interface MapStoreState {
   // ── Dữ liệu phòng ──
   rooms: Room[];
 
+  // ── Thiết bị BLE Beacons DFRobot ──
+  beacons: BeaconDevice[];
+  showBeacons: boolean;
+  isBleScanning: boolean;
+  activeBeaconMinor: number | null;
+
   // ── Mạng lưới dẫn đường ──
   navNodes: NavNode[];
   navEdges: NavEdge[];
 
-  // ── Vị trí người dùng ──
+  // ── Vị trí người dùng & La bàn ──
   userPosition: Point2D | null;
+  deviceHeading: number | null; // Góc xoay theo độ (0 - 360) từ cảm biến la bàn điện thoại
+  isSimulatingWalk: boolean;
 
   // ── Điều hướng ──
   navigation: NavigationState;
@@ -42,8 +50,15 @@ export interface MapStoreState {
   setRooms: (rooms: Room[]) => void;
   addRoom: (room: Room) => void;
   removeRoom: (roomId: string) => void;
+  setBeacons: (beacons: BeaconDevice[]) => void;
+  toggleShowBeacons: () => void;
+  setBleScanning: (scanning: boolean) => void;
+  simulateNearestBeacon: (minor: number) => void;
   setNavData: (nodes: NavNode[], edges: NavEdge[]) => void;
   setUserPosition: (position: Point2D | null) => void;
+  setDeviceHeading: (heading: number | null) => void;
+  startSimulationWalk: () => void;
+  stopSimulationWalk: () => void;
   setOrigin: (nodeId: string | null) => void;
   setDestination: (nodeId: string | null) => void;
   calculatePath: () => void;
@@ -69,9 +84,15 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
   floors: [],
   currentFloor: 1,
   rooms: [],
+  beacons: [],
+  showBeacons: true,
+  isBleScanning: false,
+  activeBeaconMinor: null,
   navNodes: [],
   navEdges: [],
   userPosition: null,
+  deviceHeading: null,
+  isSimulatingWalk: false,
   navigation: {
     originNodeId: null,
     destinationNodeId: null,
@@ -81,7 +102,7 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
   clickedCoords: [],
   builderMode: false,
   builderPoints: [],
-  building3DMode: true, // Mặc định mở chế độ mô hình 3D tòa nhà ghép 3 tầng
+  building3DMode: false, // Mặc định hiển thị mặt phẳng tầng 1 để định vị rõ ràng
 
   // ── Actions ──
   setCurrentFloor: (floor) => set({ currentFloor: floor }),
@@ -98,6 +119,96 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
     set((state) => ({
       rooms: state.rooms.filter((r) => r.id !== roomId),
     })),
+
+  setBeacons: (beacons) => set({ beacons }),
+  toggleShowBeacons: () => set((state) => ({ showBeacons: !state.showBeacons })),
+  setBleScanning: (scanning) => set({ isBleScanning: scanning }),
+  setDeviceHeading: (heading) => set({ deviceHeading: heading }),
+
+  stopSimulationWalk: () => set({ isSimulatingWalk: false }),
+
+  startSimulationWalk: () => {
+    const { navigation, navNodes } = get();
+    if (navigation.path.length < 2) return;
+
+    set({ isSimulatingWalk: true });
+    const nodeMap = new Map(navNodes.map((n) => [n.id, n]));
+    const waypoints = navigation.path.map((id) => nodeMap.get(id)?.position).filter(Boolean) as Point2D[];
+
+    let currentSegmentIndex = 0;
+    let progress = 0;
+
+    const interval = setInterval(() => {
+      const state = get();
+      if (!state.isSimulatingWalk || currentSegmentIndex >= waypoints.length - 1) {
+        clearInterval(interval);
+        set({ isSimulatingWalk: false });
+        return;
+      }
+
+      const pA = waypoints[currentSegmentIndex];
+      const pB = waypoints[currentSegmentIndex + 1];
+      const dist = Math.hypot(pB.x - pA.x, pB.z - pA.z) || 1;
+      const step = 0.35 / dist; // Tốc độ bước chân khoảng 1.2m/s
+      progress += step;
+
+      if (progress >= 1) {
+        currentSegmentIndex += 1;
+        progress = 0;
+        if (currentSegmentIndex >= waypoints.length - 1) {
+          set({ userPosition: waypoints[waypoints.length - 1], isSimulatingWalk: false });
+          clearInterval(interval);
+          return;
+        }
+      }
+
+      const currA = waypoints[currentSegmentIndex];
+      const currB = waypoints[currentSegmentIndex + 1];
+      const curX = currA.x + (currB.x - currA.x) * progress;
+      const curZ = currA.z + (currB.z - currA.z) * progress;
+
+      // Tính góc quay theo hướng bước chân
+      const angleDeg = ((Math.atan2(currB.x - currA.x, currB.z - currA.z) * 180) / Math.PI + 360) % 360;
+
+      set({
+        userPosition: { x: curX, z: curZ },
+        deviceHeading: angleDeg,
+      });
+    }, 50);
+  },
+
+
+  simulateNearestBeacon: (minor) => {
+    const { beacons, navNodes, currentFloor } = get();
+    const beacon = beacons.find((b) => b.minor === minor);
+    if (!beacon) return;
+
+    // Cập nhật vị trí người dùng theo beacon
+    set({
+      userPosition: beacon.position,
+      activeBeaconMinor: minor,
+    });
+
+    // Tự động tìm NavNode gần nhất làm originNodeId và tính lại đường đi nếu đã chọn điểm đến
+    const floorNodes = navNodes.filter((n) => n.floor === currentFloor);
+    let nearestNode: NavNode | null = null;
+    let minDist = Infinity;
+
+    for (const node of floorNodes) {
+      const dist = Math.hypot(node.position.x - beacon.position.x, node.position.z - beacon.position.z);
+      if (dist < minDist) {
+        minDist = dist;
+        nearestNode = node;
+      }
+    }
+
+    if (nearestNode) {
+      set((state) => ({
+        navigation: { ...state.navigation, originNodeId: nearestNode!.id },
+      }));
+      get().calculatePath();
+    }
+  },
 
   setNavData: (nodes, edges) => set({ navNodes: nodes, navEdges: edges }),
 

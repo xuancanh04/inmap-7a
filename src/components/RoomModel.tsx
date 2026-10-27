@@ -110,6 +110,7 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
           wallThickness={0.25}
           doorWidth={1.4}
           color={room.color || '#38bdf8'}
+          roomName={room.name}
           hasDoor={room.doorSide !== 'none'}
           doorSide={room.doorSide ?? 'auto'}
           doorSides={room.doorSides}
@@ -127,6 +128,7 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
         position={labelPosition}
         center
         distanceFactor={28}
+        zIndexRange={[1, 50]}
         style={{ pointerEvents: 'none' }}
       >
         <div
