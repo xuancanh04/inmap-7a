@@ -29,7 +29,7 @@ export interface Room {
   /** Mô tả/ghi chú thêm về phòng */
   description?: string;
   /** Loại phòng */
-  type?: 'office' | 'medical' | 'utility' | 'public' | 'corridor' | 'pharmacy';
+  type?: 'office' | 'medical' | 'utility' | 'public' | 'corridor' | 'pharmacy' | 'elevator';
   /** Có bỏ tường không (không dựng tường bao quanh, chỉ lát sàn và đặt nội thất / ghế chờ) */
   noWall?: boolean;
   /** Hướng mở cửa phòng: 'north' (lên), 'south' (xuống), 'east' (phải), 'west' (trái), hoặc 'none' */
@@ -80,4 +80,26 @@ export interface NavigationState {
   destinationNodeId: string | null;
   /** Đường đi đã tìm được (mảng ID nodes theo thứ tự) */
   path: string[];
+}
+
+/** Thông tin thiết bị phần cứng BLE Beacon */
+export interface BeaconDevice {
+  id: string;
+  name: string;
+  uuid: string;
+  major: number;
+  minor: number;
+  macAddress?: string;
+  txPower: number; // Mức RSSI tham chiếu ở 1m (mặc định -59 dBm)
+  position: Point2D; // Tọa độ (x, z) gắn trên sàn/trần
+  floor: number;
+  color?: string;
+  active?: boolean;
+}
+
+/** Dữ liệu nhận diện được từ quét sóng BLE */
+export interface BleScanReading {
+  minor: number;
+  rssi: number;
+  distance: number;
 }

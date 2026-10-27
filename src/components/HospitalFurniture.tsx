@@ -155,6 +155,8 @@ export function HospitalFurniture({ center, type = 'medical' }: HospitalFurnitur
           </mesh>
         </group>
       )}
+
+      {type === 'elevator' && null}
     </group>
   );
 }

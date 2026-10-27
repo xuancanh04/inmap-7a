@@ -4,7 +4,74 @@
 // Kích thước bản vẽ: 2129 x 2560 px  →  Kích thước sàn 3D: 40m x 48.1m
 // ============================================================================
 
-import type { Room, NavNode, NavEdge, Floor } from '../types';
+import type { Room, NavNode, NavEdge, Floor, BeaconDevice } from '../types';
+
+// ============================================================================
+// CẤU HÌNH BỘ 5 DFRobot Gravity BLE Sensor Beacon (TEL0149)
+// Tọa độ gắn thực tế phân bố tại 5 ngã rẽ và vị trí huyết mạch Tầng 1
+// ============================================================================
+export const SAMPLE_BEACONS: BeaconDevice[] = [
+  {
+    id: 'beacon-01',
+    name: 'Beacon 1 — Sảnh Hành Lang Bắc (P. Hành Chính)',
+    uuid: 'FDA50693-A4E2-4FB1-AFCF-C6EB07647825',
+    major: 10001,
+    minor: 1,
+    txPower: -59,
+    position: { x: 20.7, z: 8.6 }, // Ngay giữa hành lang Bắc
+    floor: 1,
+    color: '#3B82F6',
+    active: true,
+  },
+  {
+    id: 'beacon-02',
+    name: 'Beacon 2 — Cụm Thang Máy & Cầu Thang Trung Tâm',
+    uuid: 'FDA50693-A4E2-4FB1-AFCF-C6EB07647825',
+    major: 10001,
+    minor: 2,
+    txPower: -59,
+    position: { x: 20.7, z: 23.5 }, // Tâm sảnh thang máy
+    floor: 1,
+    color: '#8B5CF6',
+    active: true,
+  },
+  {
+    id: 'beacon-03',
+    name: 'Beacon 3 — Ngã Ba Hành Lang Khám Chuyên Khoa (Phía Đông)',
+    uuid: 'FDA50693-A4E2-4FB1-AFCF-C6EB07647825',
+    major: 10001,
+    minor: 3,
+    txPower: -59,
+    position: { x: 31.0, z: 18.2 }, // Hành lang dọc đón các phòng khám Tai Mũi Họng, Mắt, Răng
+    floor: 1,
+    color: '#10B981',
+    active: true,
+  },
+  {
+    id: 'beacon-04',
+    name: 'Beacon 4 — Ngã Rẽ Hành Lang Khám Nội & Cận Lâm Sàng',
+    uuid: 'FDA50693-A4E2-4FB1-AFCF-C6EB07647825',
+    major: 10001,
+    minor: 4,
+    txPower: -59,
+    position: { x: 20.4, z: 29.0 }, // Hành lang ngang phía dưới
+    floor: 1,
+    color: '#F59E0B',
+    active: true,
+  },
+  {
+    id: 'beacon-05',
+    name: 'Beacon 5 — Khu Vực Cấp Cứu Ban Đầu & Cầu Thang Bộ 1',
+    uuid: 'FDA50693-A4E2-4FB1-AFCF-C6EB07647825',
+    major: 10001,
+    minor: 5,
+    txPower: -59,
+    position: { x: 32.0, z: 8.6 }, // Ngã rẽ góc Đông Bắc
+    floor: 1,
+    color: '#EF4444',
+    active: true,
+  },
+];
 
 // ── Thông tin Tầng ──
 export const SAMPLE_FLOORS: Floor[] = [
@@ -73,6 +140,10 @@ export const GROUND_FLOOR_ROOMS: Room[] = [
     center: { x: 20.71, z: 23.49 },
     color: '#3B82F6',
     type: 'office',
+    doorPositions: [
+      { x: 13.0, z: 19.26 },
+      { x: 13.0, z: 27.71 },
+    ],
     description: 'Sảnh đón tiếp và phát số thứ tự khám tự động',
   },
   {
@@ -198,6 +269,10 @@ export const FLOOR_2_ROOMS: Room[] = [
     center: { x: 20.71, z: 23.49 },
     color: '#64748B',
     type: 'public',
+    doorPositions: [
+      { x: 13.0, z: 19.26 },
+      { x: 13.0, z: 27.71 },
+    ],
     description: 'Sảnh sinh hoạt chung và tiếp đón người nhà bệnh nhân',
   },
   {
@@ -479,9 +554,13 @@ export const SAMPLE_ROOMS: Room[] = [
     ],
     center: { x: 20.71, z: 23.49 },
     color: '#64748B',
-    type: 'public',
-    doorSides: ['north', 'south'], // Có 2 cửa đôi mở ở phía Bắc và phía Nam khớp 100% bản vẽ 2D
-    description: 'Cầu thang bộ chính, cụm thang máy và sảnh thông tầng (2 cửa Bắc & Nam)',
+    type: 'elevator',
+    // Cửa đôi vào sảnh cầu thang khớp 100% bản vẽ 2D: cạnh ngược lại phía Tây
+    doorPositions: [
+      { x: 13.0, z: 19.26 }, // Cửa phía Bắc (góc bên trái)
+      { x: 13.0, z: 27.71 }, // Cửa phía Nam (góc bên trái)
+    ],
+    description: 'Cầu thang bộ chính, cụm thang máy và sảnh thông tầng',
   },
 
   // ==========================================
@@ -489,6 +568,22 @@ export const SAMPLE_ROOMS: Room[] = [
   // Khớp 100% 8 phòng khám chuyên khoa + 1 cầu thang thoát hiểm trên bản vẽ 2D
   // Mỗi phòng có 1 cửa đôi khớp chính xác từng cung cửa vẽ trên sàn (west wall x = 32.6)
   // ==========================================
+  {
+    id: 'room-right-0',
+    name: 'Phòng Trực Khám / Cấp Cứu Ban Đầu',
+    floor: 1,
+    polygon: [
+      { x: 32.64, z: 7.23 },
+      { x: 39.95, z: 7.23 },
+      { x: 39.95, z: 10.15 },
+      { x: 32.64, z: 10.15 },
+    ],
+    center: { x: 36.3, z: 8.69 },
+    color: '#EF4444',
+    type: 'medical',
+    doorPositions: [{ x: 32.64, z: 8.69 }], // Cửa đôi mở ra hành lang Tây khớp bản vẽ 2D
+    description: 'Phòng tiếp nhận khám ban đầu & xử lý cấp cứu',
+  },
   {
     id: 'room-right-1',
     name: 'Phòng Khám Tai Mũi Họng',
@@ -715,7 +810,7 @@ export const SAMPLE_ROOMS: Room[] = [
     center: { x: 27.76, z: 32.37 },
     color: '#8B5CF6',
     type: 'medical',
-    doorSide: 'west', // Cửa mở hướng Tây ra hành lang dọc theo bản vẽ 2D
+    doorSide: 'east', // Mở cửa hướng Đông ra hành lang dọc có đường dẫn màu xanh
     description: 'Lấy mẫu & xét nghiệm huyết học',
   },
   {
@@ -731,7 +826,7 @@ export const SAMPLE_ROOMS: Room[] = [
     center: { x: 27.76, z: 37.73 },
     color: '#8B5CF6',
     type: 'medical',
-    doorSide: 'west', // Mở cửa hướng Tây ra hành lang dọc
+    doorSide: 'east', // Mở cửa hướng Đông ra hành lang dọc có đường dẫn màu xanh
     description: 'Chụp X-quang kỹ thuật số',
   },
   {
@@ -741,13 +836,13 @@ export const SAMPLE_ROOMS: Room[] = [
     polygon: [
       { x: 25.93, z: 40.96 },
       { x: 29.59, z: 40.96 },
-      { x: 29.59, z: 47.9 },
-      { x: 25.93, z: 47.9 },
+      { x: 29.59, z: 45.5 },
+      { x: 25.93, z: 45.5 },
     ],
-    center: { x: 27.76, z: 44.43 },
+    center: { x: 27.76, z: 43.23 },
     color: '#06B6D4',
     type: 'medical',
-    doorSide: 'west', // Mở cửa hướng Tây ra hành lang dọc
+    doorSide: 'east', // Mở cửa hướng Đông ra hành lang dọc có đường dẫn màu xanh
     description: 'Điện tâm đồ (ECG) và đo lưu huyết não',
   },
   {
@@ -795,7 +890,7 @@ export const SAMPLE_ROOMS: Room[] = [
     center: { x: 15.0, z: 41.8 },
     color: '#10B981',
     type: 'medical',
-    doorSide: 'north', // Mở cửa hướng Bắc
+    doorSide: 'south', // Cửa mở hướng Nam ra hành lang đáy đi vào
     description: 'Phòng khám & tư vấn chuyên khoa số 1',
   },
   {
@@ -811,7 +906,7 @@ export const SAMPLE_ROOMS: Room[] = [
     center: { x: 22.26, z: 41.8 },
     color: '#10B981',
     type: 'medical',
-    doorSide: 'north', // Mở cửa hướng Bắc
+    doorSide: 'south', // Cửa mở hướng Nam ra hành lang đáy đi vào
     description: 'Phòng khám & tư vấn chuyên khoa số 2',
   },
 ];
@@ -854,6 +949,7 @@ export const SAMPLE_NAV_NODES: NavNode[] = [
   { id: 'n-dieu-hanh', position: { x: 25.9, z: 9.6 }, floor: 1, roomId: 'room-dieu-hanh', label: 'Cửa P. Điều hành' },
 
   // Cánh phải (khám chuyên khoa)
+  { id: 'n-truc-kham', position: { x: 31.8, z: 8.69 }, floor: 1, roomId: 'room-right-0', label: 'Cửa P. Trực Khám' },
   { id: 'n-tai-mui-hong', position: { x: 31.8, z: 13.5 }, floor: 1, roomId: 'room-right-1', label: 'Cửa P. Tai Mũi Họng' },
   { id: 'n-mat', position: { x: 31.8, z: 20.2 }, floor: 1, roomId: 'room-right-2', label: 'Cửa P. Mắt' },
   { id: 'n-rang', position: { x: 31.8, z: 27.0 }, floor: 1, roomId: 'room-right-3', label: 'Cửa P. Răng Hàm Mặt' },
@@ -936,6 +1032,7 @@ export const SAMPLE_NAV_EDGES: NavEdge[] = [
   { from: 'n-dieu-hanh', to: 'c-top-right', weight: 5.2 },
 
   // Cửa phòng cánh phải
+  { from: 'n-truc-kham', to: 'c-top-right', weight: 0.8 },
   { from: 'n-tai-mui-hong', to: 'c-mid-right', weight: 4.8 },
   { from: 'n-mat', to: 'c-mid-right', weight: 2.1 },
   { from: 'n-rang', to: 'c-lower-right', weight: 2.2 },
