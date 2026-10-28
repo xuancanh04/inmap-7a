@@ -1,10 +1,5 @@
-// ============================================================================
-// InMap 7A — Thuật toán tìm đường A* (A-Star Pathfinding)
-// ============================================================================
-
 import type { NavNode, NavEdge } from '../types';
 
-/** Tính khoảng cách Euclidean giữa 2 điểm trên mặt phẳng XZ */
 function euclideanDistance(
   a: { x: number; z: number },
   b: { x: number; z: number }
@@ -14,10 +9,6 @@ function euclideanDistance(
   return Math.sqrt(dx * dx + dz * dz);
 }
 
-/**
- * Xây dựng adjacency list từ danh sách cạnh.
- * Mỗi cạnh là hai chiều (undirected graph).
- */
 function buildAdjacencyList(
   edges: NavEdge[],
   nodes: NavNode[]
@@ -29,7 +20,6 @@ function buildAdjacencyList(
 
   const adj = new Map<string, Array<{ neighborId: string; weight: number }>>();
 
-  // Khởi tạo mảng rỗng cho mỗi node
   for (const node of nodes) {
     adj.set(node.id, []);
   }
@@ -39,7 +29,6 @@ function buildAdjacencyList(
     const toNode = nodeMap.get(edge.to);
     if (!fromNode || !toNode) continue;
 
-    // Tính trọng số: dùng weight được cung cấp, hoặc tính khoảng cách Euclidean
     const weight =
       edge.weight ?? euclideanDistance(fromNode.position, toNode.position);
 
@@ -50,10 +39,6 @@ function buildAdjacencyList(
   return adj;
 }
 
-/**
- * Min-Heap đơn giản cho A* priority queue.
- * Sử dụng mảng và sắp xếp lại để đảm bảo tính đúng đắn.
- */
 class MinHeap {
   private data: Array<{ nodeId: string; priority: number }> = [];
 
@@ -117,15 +102,6 @@ class MinHeap {
   }
 }
 
-/**
- * Thuật toán A* tìm đường ngắn nhất.
- *
- * @param startId - ID nút xuất phát
- * @param goalId  - ID nút đích
- * @param nodes   - Danh sách tất cả NavNode
- * @param edges   - Danh sách tất cả NavEdge
- * @returns Mảng ID nodes tạo thành đường đi ngắn nhất, hoặc mảng rỗng nếu không tìm thấy.
- */
 export function findShortestPath(
   startId: string,
   goalId: string,
@@ -143,17 +119,15 @@ export function findShortestPath(
 
   const adj = buildAdjacencyList(edges, nodes);
 
-  // g(n): chi phí thực từ start đến n
   const gScore = new Map<string, number>();
-  // f(n) = g(n) + h(n) — ước lượng tổng chi phí
+
   const fScore = new Map<string, number>();
-  // Truy vết đường đi
+
   const cameFrom = new Map<string, string>();
 
   const closedSet = new Set<string>();
   const openHeap = new MinHeap();
 
-  // Khởi tạo
   gScore.set(startId, 0);
   fScore.set(startId, euclideanDistance(startNode.position, goalNode.position));
   openHeap.push(startId, fScore.get(startId)!);
@@ -162,7 +136,6 @@ export function findShortestPath(
     const current = openHeap.pop()!;
     const currentId = current.nodeId;
 
-    // Đã đến đích → truy vết đường đi
     if (currentId === goalId) {
       const path: string[] = [];
       let node: string | undefined = goalId;
@@ -196,6 +169,5 @@ export function findShortestPath(
     }
   }
 
-  // Không tìm thấy đường đi
   return [];
 }

@@ -1,29 +1,32 @@
-// ============================================================================
-// InMap 7A — CoordHUD.tsx
-// HUD hiển thị tọa độ click (Admin Tool) ở góc dưới phải màn hình
-// ============================================================================
-
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useMapStore } from '../store/useMapStore';
 import type { Point2D } from '../types';
+import {
+  startWebBleBeaconScanner,
+  activateBeaconViaUsbRunInRam,
+} from '../utils/beaconPositioning';
 
-/**
- * Bảng HUD nhỏ ở góc dưới phải hiển thị:
- * - Tọa độ click gần nhất
- * - Lịch sử các điểm đã click (tối đa 20 điểm)
- * - Nút copy all / clear
- */
 export function CoordHUD() {
   const adminMode = useMapStore((s) => s.adminMode);
   const clickedCoords = useMapStore((s) => s.clickedCoords);
   const clearClickedCoords = useMapStore((s) => s.clearClickedCoords);
   const removeClickedCoord = useMapStore((s) => s.removeClickedCoord);
 
+  const beacons = useMapStore((s) => s.beacons);
+  const showBeacons = useMapStore((s) => s.showBeacons);
+  const toggleShowBeacons = useMapStore((s) => s.toggleShowBeacons);
+  const activeBeaconMinor = useMapStore((s) => s.activeBeaconMinor);
+  const simulateNearestBeacon = useMapStore((s) => s.simulateNearestBeacon);
+  const isBleScanning = useMapStore((s) => s.isBleScanning);
+  const setBleScanning = useMapStore((s) => s.setBleScanning);
+
+  const [showBleSettings, setShowBleSettings] = useState(true);
+  const [bleStatusText, setBleStatusText] = useState<string>('');
+
   const lastCoord = clickedCoords.length > 0
     ? clickedCoords[clickedCoords.length - 1]
     : null;
 
-  // Copy tất cả tọa độ dưới dạng JSON array
   const handleCopyAll = useCallback(() => {
     const formatted = clickedCoords
       .map((c: Point2D) => `  { x: ${c.x}, z: ${c.z} }`)
@@ -33,7 +36,6 @@ export function CoordHUD() {
     console.log('📋 [Admin Tool] Đã copy tất cả tọa độ:\n' + text);
   }, [clickedCoords]);
 
-  // Copy một tọa độ
   const handleCopyOne = useCallback((coord: Point2D) => {
     const text = `{ x: ${coord.x}, z: ${coord.z} }`;
     navigator.clipboard.writeText(text).catch(() => {});
@@ -43,7 +45,7 @@ export function CoordHUD() {
 
   return (
     <div style={styles.container}>
-      {/* ── Header ── */}
+      {}
       <div style={styles.header}>
         <div style={styles.headerLeft}>
           <span style={styles.pulse} />
@@ -52,7 +54,7 @@ export function CoordHUD() {
         <span style={styles.badge}>{clickedCoords.length}</span>
       </div>
 
-      {/* ── Tọa độ hiện tại ── */}
+      {}
       <div style={styles.currentCoord}>
         {lastCoord ? (
           <>
@@ -74,7 +76,7 @@ export function CoordHUD() {
         )}
       </div>
 
-      {/* ── Danh sách lịch sử ── */}
+      {}
       {clickedCoords.length > 0 && (
         <div style={styles.historySection}>
           <div style={styles.historyHeader}>
@@ -120,15 +122,135 @@ export function CoordHUD() {
         </div>
       )}
 
-      {/* ── Footer hint ── */}
+      {}
       <div style={styles.footer}>
         💡 Tọa độ tự động copy vào clipboard khi click
+      </div>
+
+      {}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '12px 16px' }}>
+        <div
+          onClick={() => setShowBleSettings((v) => !v)}
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: 8 }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>📡</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#38bdf8' }}>
+              Quản lý BLE Beacon ({beacons.length})
+            </span>
+          </div>
+          <span style={{ fontSize: 10, color: '#64748b' }}>
+            {showBleSettings ? 'Đóng ▲' : 'Mở ▼'}
+          </span>
+        </div>
+
+        {showBleSettings && (
+          <div>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+              <button
+                onClick={async () => {
+                  setBleStatusText('Đang mở cổng USB...');
+                  const success = await activateBeaconViaUsbRunInRam((log) =>
+                    setBleStatusText(log)
+                  );
+                  if (success) simulateNearestBeacon(1);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '6px',
+                  background: 'rgba(234, 179, 8, 0.2)',
+                  color: '#facc15',
+                  border: '1px solid rgba(234, 179, 8, 0.4)',
+                  borderRadius: 6,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                🔌 USB RAM
+              </button>
+              <button
+                onClick={async () => {
+                  if (isBleScanning) {
+                    setBleScanning(false);
+                    setBleStatusText('Đã dừng quét');
+                    return;
+                  }
+                  setBleStatusText('Đang quét Bluetooth...');
+                  const success = await startWebBleBeaconScanner((minor, rssi) => {
+                    setBleStatusText(`Bắt Beacon ${minor} (${rssi}dBm)`);
+                    simulateNearestBeacon(minor);
+                  });
+                  if (success) setBleScanning(true);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '6px',
+                  background: isBleScanning ? 'rgba(16, 185, 129, 0.25)' : 'rgba(56, 189, 248, 0.2)',
+                  color: isBleScanning ? '#34d399' : '#38bdf8',
+                  border: isBleScanning ? '1px solid #10b981' : '1px solid rgba(56, 189, 248, 0.4)',
+                  borderRadius: 6,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                {isBleScanning ? '📶 Quét ON' : '⚡ Quét BLE'}
+              </button>
+              <button
+                onClick={toggleShowBeacons}
+                style={{
+                  padding: '6px 8px',
+                  background: 'rgba(255,255,255,0.08)',
+                  color: '#cbd5e1',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 6,
+                  fontSize: 10,
+                  cursor: 'pointer',
+                }}
+              >
+                {showBeacons ? 'Ẩn 3D' : 'Hiện 3D'}
+              </button>
+            </div>
+
+            {bleStatusText && (
+              <div style={{ fontSize: 10, color: '#38bdf8', padding: '4px 8px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: 6, marginBottom: 6 }}>
+                {bleStatusText}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 110, overflowY: 'auto' }}>
+              {beacons.map((b) => {
+                const isCurrent = activeBeaconMinor === b.minor;
+                return (
+                  <div
+                    key={b.id}
+                    onClick={() => simulateNearestBeacon(b.minor)}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      padding: '4px 8px',
+                      borderRadius: 6,
+                      background: isCurrent ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.04)',
+                      border: isCurrent ? '1px solid #10b981' : '1px solid transparent',
+                      fontSize: 10,
+                      color: isCurrent ? '#34d399' : '#cbd5e1',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span>{isCurrent ? '🟢' : '📡'} {b.name}</span>
+                    <span style={{ color: '#64748b' }}>Minor:{b.minor}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// ── Styles ──
 const styles: Record<string, React.CSSProperties> = {
   container: {
     position: 'absolute',
@@ -165,7 +287,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '50%',
     background: '#ff6b6b',
     boxShadow: '0 0 8px #ff6b6b',
-    animation: 'none', // CSS animation would need @keyframes
+    animation: 'none',
   },
   headerTitle: {
     fontSize: 12,

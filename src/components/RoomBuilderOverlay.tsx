@@ -1,8 +1,3 @@
-// ============================================================================
-// InMap 7A — RoomBuilderOverlay.tsx
-// Hiển thị các đỉnh đang vẽ, đường viền đa giác và khối 3D xem trước thời gian thực
-// ============================================================================
-
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { Line } from '@react-three/drei';
@@ -12,18 +7,16 @@ export function RoomBuilderOverlay() {
   const builderMode = useMapStore((s) => s.builderMode);
   const builderPoints = useMapStore((s) => s.builderPoints);
 
-  // Tạo các line segments để nối các điểm đang vẽ
   const linePoints = useMemo(() => {
     if (builderPoints.length < 2) return [];
     const pts = builderPoints.map((p) => new THREE.Vector3(p.x, 0.15, p.z));
-    // Nối khép kín nếu có từ 3 điểm trở lên
+
     if (builderPoints.length >= 3) {
       pts.push(new THREE.Vector3(builderPoints[0].x, 0.15, builderPoints[0].z));
     }
     return pts;
   }, [builderPoints]);
 
-  // Tạo preview khối 3D bán trong suốt nếu đã có từ 3 điểm trở lên
   const previewGeometry = useMemo(() => {
     if (builderPoints.length < 3) return null;
     const shape = new THREE.Shape();
@@ -46,7 +39,7 @@ export function RoomBuilderOverlay() {
 
   return (
     <group>
-      {/* ── Các marker tại từng đỉnh ── */}
+      {}
       {builderPoints.map((p, idx) => (
         <group key={`bp-${idx}-${p.x}-${p.z}`} position={[p.x, 0.25, p.z]}>
           <mesh>
@@ -69,7 +62,7 @@ export function RoomBuilderOverlay() {
         </group>
       ))}
 
-      {/* ── Đường viền đa giác nối các đỉnh ── */}
+      {}
       {linePoints.length >= 2 && (
         <Line
           points={linePoints}
@@ -79,7 +72,7 @@ export function RoomBuilderOverlay() {
         />
       )}
 
-      {/* ── Khối 3D xem trước thời gian thực (Extrude 3D) ── */}
+      {}
       {previewGeometry && (
         <mesh
           geometry={previewGeometry}

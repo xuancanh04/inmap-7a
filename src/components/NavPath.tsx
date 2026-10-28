@@ -1,22 +1,11 @@
-// ============================================================================
-// InMap 7A — NavPath.tsx
-// Vẽ đường dẫn đường thông minh có mũi tên neon lướt chạy theo chiều đi
-// ============================================================================
-
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Line, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useMapStore } from '../store/useMapStore';
 
-const PATH_Y = 0.18; // Nâng đường lên khỏi mặt sàn tránh z-fighting
+const PATH_Y = 0.18;
 
-/**
- * Component vẽ đường dẫn đường thông minh:
- * - Dải sáng neon màu xanh ngọc phát sáng dẫn lối.
- * - Các mũi tên chỉ hướng đi cố định in trên mặt sàn chỉ rõ chiều đi.
- * - Marker cờ đích & vòng sóng tỏa nổi bật tại điểm đến.
- */
 export function NavPath() {
   const path = useMapStore((s) => s.navigation.path);
   const navNodes = useMapStore((s) => s.navNodes);
@@ -28,7 +17,6 @@ export function NavPath() {
 
   const userPosition = useMapStore((s) => s.userPosition);
 
-  // Chuyển đổi mảng node IDs → mảng Vector3 3D đầy đủ
   const rawPoints = useMemo(() => {
     if (path.length < 2) return [];
     const nodeMap = new Map(navNodes.map((n) => [n.id, n]));
@@ -43,7 +31,6 @@ export function NavPath() {
     return pts;
   }, [path, navNodes]);
 
-  // Thu ngắn đường dẫn theo bước chân người đi (Chuẩn Google Maps: đi tới đâu xóa đường tới đó)
   const points = useMemo(() => {
     if (rawPoints.length < 2) return [];
     if (!userPosition) return rawPoints;
@@ -51,7 +38,6 @@ export function NavPath() {
     const uX = userPosition.x;
     const uZ = userPosition.z;
 
-    // Tìm đoạn thẳng trên lộ trình mà người dùng đang đứng gần nhất
     let bestDist = Infinity;
     let bestSegIdx = 0;
     let projPoint = new THREE.Vector3(uX, PATH_Y, uZ);
@@ -81,7 +67,6 @@ export function NavPath() {
       }
     }
 
-    // Nếu người dùng ở trong phạm vi hành lang dẫn đường (< 4 mét), cắt bỏ đoạn đã đi qua
     if (bestDist < 4.0) {
       const remaining: THREE.Vector3[] = [projPoint];
       for (let i = bestSegIdx + 1; i < rawPoints.length; i++) {
@@ -93,12 +78,10 @@ export function NavPath() {
     return rawPoints;
   }, [rawPoints, userPosition]);
 
-  // Mảng điểm cho Line rendering
   const linePoints = useMemo(() => {
     return points.map((p) => [p.x, p.y, p.z] as [number, number, number]);
   }, [points]);
 
-  // Tìm tên điểm xuất phát và điểm đích
   const originName = useMemo(() => {
     if (!originNodeId) return 'Vị trí của bạn';
     const node = navNodes.find((n) => n.id === originNodeId);
@@ -115,7 +98,6 @@ export function NavPath() {
     return room?.name ?? node.label ?? 'Điểm đến';
   }, [destinationNodeId, navNodes, rooms]);
 
-  // Tạo các mũi tên V-shape chevron tinh tế (kiểu Google Maps) nằm phẳng chìm trên dải đường xanh còn lại
   const directionalArrows = useMemo(() => {
     if (points.length < 2) return [];
     const arrows: Array<{
@@ -132,7 +114,7 @@ export function NavPath() {
       if (segLen < 1.0) continue;
 
       const angle = Math.atan2(dx, dz);
-      const step = 2.5; // Đặt cách nhau 2.5m thoáng đãng
+      const step = 2.5;
       const numArrows = Math.max(1, Math.floor(segLen / step));
 
       for (let j = 1; j <= numArrows; j++) {
@@ -146,7 +128,6 @@ export function NavPath() {
     return arrows;
   }, [points]);
 
-  // Animation cho vòng sóng xung kích của Blue Dot Google Maps
   useFrame(({ clock }) => {
     if (destMarkerRef.current) {
       const t = clock.getElapsedTime();
@@ -162,7 +143,7 @@ export function NavPath() {
 
   return (
     <group name="navigation-path-layer">
-      {/* ── 1. Viền ngoài bóng mờ của đường dẫn (Google Maps road casing) ── */}
+      {}
       <Line
         points={linePoints}
         color="#1d4ed8"
@@ -170,7 +151,7 @@ export function NavPath() {
         dashed={false}
       />
 
-      {/* ── 2. Dải đường màu xanh Google Maps đặc trưng (#3b82f6 / #4285F4) ── */}
+      {}
       <Line
         points={linePoints}
         color="#3b82f6"
@@ -178,7 +159,7 @@ export function NavPath() {
         dashed={false}
       />
 
-      {/* ── 3. Các mũi tên Chevron chỉ hướng kiểu Google Maps thanh mảnh, tinh tế ── */}
+      {}
       <group>
         {directionalArrows.map((arrow, idx) => (
           <group
@@ -186,7 +167,7 @@ export function NavPath() {
             position={arrow.pos}
             rotation={[0, arrow.rotY, 0]}
           >
-            {/* Cánh trái chevron */}
+            {}
             <mesh
               rotation={[-Math.PI / 2, 0, Math.PI / 4]}
               position={[-0.08, 0, 0]}
@@ -194,7 +175,7 @@ export function NavPath() {
               <planeGeometry args={[0.07, 0.28]} />
               <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} />
             </mesh>
-            {/* Cánh phải chevron */}
+            {}
             <mesh
               rotation={[-Math.PI / 2, 0, -Math.PI / 4]}
               position={[0.08, 0, 0]}
@@ -206,9 +187,9 @@ export function NavPath() {
         ))}
       </group>
 
-      {/* ── 4. ĐIỂM XUẤT PHÁT: Google Maps Blue Dot (Chấm xanh viền trắng có hào quang) ── */}
+      {}
       <group position={[startPt.x, PATH_Y, startPt.z]}>
-        {/* Hào quang xanh tỏa rộng dưới sàn */}
+        {}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
           <ringGeometry args={[0.3, 0.9, 32]} />
           <meshBasicMaterial
@@ -218,18 +199,18 @@ export function NavPath() {
             side={THREE.DoubleSide}
           />
         </mesh>
-        {/* Vành tròn trắng ngoài */}
+        {}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
           <ringGeometry args={[0.22, 0.38, 32]} />
           <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} />
         </mesh>
-        {/* Chấm tròn xanh Google Maps ở giữa */}
+        {}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
           <circleGeometry args={[0.22, 32]} />
           <meshBasicMaterial color="#2563eb" side={THREE.DoubleSide} />
         </mesh>
 
-        {/* Nhãn Google Maps: Điểm đi */}
+        {}
         <Html
           position={[0, 0.9, 0]}
           center
@@ -246,34 +227,34 @@ export function NavPath() {
         </Html>
       </group>
 
-      {/* ── 5. ĐIỂM ĐẾN: Google Maps Red Pin (Ghim đỏ giọt nước chuẩn Google Maps) ── */}
+      {}
       <group position={[endPt.x, PATH_Y, endPt.z]}>
-        {/* Bóng đen đổ tròn dưới chân ghim */}
+        {}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
           <circleGeometry args={[0.35, 32]} />
           <meshBasicMaterial color="#0f172a" transparent opacity={0.4} side={THREE.DoubleSide} />
         </mesh>
 
-        {/* Cụm ghim 3D chuẩn Google Maps hình giọt nước có chấm trắng ở giữa */}
+        {}
         <group ref={destMarkerRef} position={[0, 0.8, 0]}>
-          {/* Khối đầu ghim tròn màu đỏ */}
+          {}
           <mesh position={[0, 0.3, 0]}>
             <sphereGeometry args={[0.42, 24, 24]} />
             <meshStandardMaterial color="#ea4335" roughness={0.2} metalness={0.1} />
           </mesh>
-          {/* Mũi nhọn ghim chĩa xuống đất */}
+          {}
           <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI]}>
             <coneGeometry args={[0.38, 0.6, 24]} />
             <meshStandardMaterial color="#ea4335" roughness={0.2} metalness={0.1} />
           </mesh>
-          {/* Chấm tròn trắng đặc trưng bên trong ghim Google Maps */}
+          {}
           <mesh position={[0, 0.3, 0.35]}>
             <circleGeometry args={[0.16, 24]} />
             <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} />
           </mesh>
         </group>
 
-        {/* Huy hiệu Google Maps điểm đến */}
+        {}
         <Html
           position={[0, 1.85, 0]}
           center

@@ -1,8 +1,3 @@
-// ============================================================================
-// InMap 7A — RoomModel.tsx
-// Mô hình Kiến trúc Bệnh viện 3D Thực tế: Tường kiến trúc, Cửa, Gạch sàn y tế, Đồ nội thất & Nhãn HTML
-// ============================================================================
-
 import { useMemo, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
@@ -13,7 +8,7 @@ import { HospitalFurniture } from './HospitalFurniture';
 
 interface RoomModelProps {
   room: Room;
-  /** Chiều cao tường (mặc định: 2.8m thực tế) */
+
   wallHeight?: number;
 }
 
@@ -23,14 +18,12 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
   const destinationNodeId = useMapStore((s) => s.navigation.destinationNodeId);
   const navNodes = useMapStore((s) => s.navNodes);
 
-  // Kiểm tra phòng có đang được chọn làm đích đến không
   const isDestination = useMemo(() => {
     if (!destinationNodeId) return false;
     const destNode = navNodes.find((n) => n.id === destinationNodeId);
     return destNode?.roomId === room.id;
   }, [destinationNodeId, navNodes, room.id]);
 
-  // Tạo Shape 2D mặt sàn của phòng
   const floorShape = useMemo(() => {
     const s = new THREE.Shape();
     if (!room.polygon || room.polygon.length === 0) return s;
@@ -44,13 +37,11 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
     return s;
   }, [room.polygon]);
 
-  // Mặt sàn phòng ốp gạch y tế
   const floorGeometry = useMemo(
     () => new THREE.ShapeGeometry(floorShape),
     [floorShape]
   );
 
-  // Vị trí đặt nhãn tên phòng
   const labelPosition: [number, number, number] = useMemo(() => {
     const cx = room.center?.x ?? room.polygon[0]?.x ?? 0;
     const cz = room.center?.z ?? room.polygon[0]?.z ?? 0;
@@ -86,7 +77,7 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
       onPointerOver={handlePointerOver}
       onPointerOut={handlePointerOut}
     >
-      {/* ── 1. Mặt sàn gạch men y tế chuyên dụng (Medical Floor Tiles) ── */}
+      {}
       <mesh
         geometry={floorGeometry}
         rotation={[-Math.PI / 2, 0, 0]}
@@ -102,7 +93,7 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
         />
       </mesh>
 
-      {/* ── 2. Hệ tường kiến trúc rỗng có ô cửa mở vào phòng (Hospital Wall System) ── */}
+      {}
       {!room.noWall && (
         <HospitalWallMesh
           polygon={room.polygon}
@@ -120,10 +111,10 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
         />
       )}
 
-      {/* ── 3. Nội thất 3D chi tiết (Giường bệnh, bàn khám, máy tính, đèn LED trần) ── */}
+      {}
       <HospitalFurniture center={room.center} type={room.type || 'medical'} />
 
-      {/* ── 4. Nhãn tên khoa phòng công nghệ cao ── */}
+      {}
       <Html
         position={labelPosition}
         center

@@ -1,16 +1,6 @@
-// ============================================================================
-// InMap 7A — UIPanel.tsx
-// Bảng điều khiển UI Hiện đại: Apple Maps & Google Maps Styling
-// Glassmorphism, Danh mục nhanh, Tìm kiếm thông minh, Thu gọn cài đặt Beacon
-// ============================================================================
-
 import type React from 'react';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useMapStore } from '../store/useMapStore';
-import {
-  startWebBleBeaconScanner,
-  activateBeaconViaUsbRunInRam,
-} from '../utils/beaconPositioning';
 
 export function UIPanel() {
   const floors = useMapStore((s) => s.floors);
@@ -20,35 +10,32 @@ export function UIPanel() {
   const navigation = useMapStore((s) => s.navigation);
   const setCurrentFloor = useMapStore((s) => s.setCurrentFloor);
   const clearNavigation = useMapStore((s) => s.clearNavigation);
-
   const navigateToRoom = useMapStore((s) => s.navigateToRoom);
-  const beacons = useMapStore((s) => s.beacons);
-  const showBeacons = useMapStore((s) => s.showBeacons);
-  const toggleShowBeacons = useMapStore((s) => s.toggleShowBeacons);
-  const activeBeaconMinor = useMapStore((s) => s.activeBeaconMinor);
-  const simulateNearestBeacon = useMapStore((s) => s.simulateNearestBeacon);
-  const isBleScanning = useMapStore((s) => s.isBleScanning);
-  const setBleScanning = useMapStore((s) => s.setBleScanning);
 
-  const [searchTerm, setSearchTerm] = useState('');
   const [isMobileCollapsed, setIsMobileCollapsed] = useState(false);
-  const [showBleSettings, setShowBleSettings] = useState(false);
-  const [bleStatusText, setBleStatusText] = useState<string>('');
 
-  // Lọc phòng theo tầng và từ khóa tìm kiếm
+  const [originSearchText, setOriginSearchText] = useState('');
+  const [isOriginCustom, setIsOriginCustom] = useState(false);
+  const [showOriginSuggestions, setShowOriginSuggestions] = useState(false);
+  const [showDestSuggestions, setShowDestSuggestions] = useState(false);
+  const [destSearchText, setDestSearchText] = useState('');
+
+  const routeCardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (routeCardRef.current && !routeCardRef.current.contains(e.target as Node)) {
+        setShowOriginSuggestions(false);
+        setShowDestSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const floorRooms = useMemo(() => {
-    return rooms
-      .filter((r) => r.floor === currentFloor)
-      .filter((r) => {
-        if (!searchTerm.trim()) return true;
-        const q = searchTerm.toLowerCase();
-        return (
-          r.name.toLowerCase().includes(q) ||
-          (r.description && r.description.toLowerCase().includes(q))
-        );
-      });
-  }, [rooms, currentFloor, searchTerm]);
-
+    return rooms.filter((r) => r.floor === currentFloor);
+  }, [rooms, currentFloor]);
 
   const roomNodes = useMemo(
 
@@ -60,7 +47,6 @@ export function UIPanel() {
     clearNavigation();
   }, [clearNavigation]);
 
-
   const getRoomNameForNode = useCallback(
     (nodeId: string) => {
       const node = navNodes.find((n) => n.id === nodeId);
@@ -70,6 +56,139 @@ export function UIPanel() {
     },
     [navNodes, rooms]
   );
+
+  const originSuggestions = useMemo(() => {
+    if (!originSearchText.trim()) return roomNodes;
+    const q = originSearchText.toLowerCase();
+    return roomNodes.filter((n) => {
+      const name = getRoomNameForNode(n.id).toLowerCase();
+      return name.includes(q);
+    });
+  }, [roomNodes, originSearchText, getRoomNameForNode]);
+
+  const destSuggestions = useMemo(() => {
+    if (!destSearchText.trim()) return roomNodes;
+    const q = destSearchText.toLowerCase();
+    return roomNodes.filter((n) => {
+      const name = getRoomNameForNode(n.id).toLowerCase();
+      return name.includes(q);
+    });
+  }, [roomNodes, destSearchText, getRoomNameForNode]);
+
+  const handleSelectOrigin = (nodeId: string | null) => {
+    const state = useMapStore.getState();
+    if (nodeId === null) {
+
+      setIsOriginCustom(false);
+      setOriginSearchText('');
+      const floorNodes = state.navNodes.filter((n) => n.floor === state.currentFloor);
+      let nearestOrigin = floorNodes[0];
+      if (state.userPosition) {
+        let minDist = Infinity;
+        for (const node of floorNodes) {
+          const dist = Math.hypot(node.position.x - state.userPosition.x, node.position.z - state.userPosition.z);
+          if (dist < minDist) {
+            minDist = dist;
+            nearestOrigin = node;
+          }
+        }
+      }
+      useMapStore.setState({
+        navigation: {
+          ...state.navigation,
+          originNodeId: nearestOrigin?.id ?? null,
+        },
+      });
+    } else {
+      setIsOriginCustom(true);
+      const name = getRoomNameForNode(nodeId);
+      setOriginSearchText(name);
+      useMapStore.setState({
+        navigation: {
+          ...state.navigation,
+          originNodeId: nodeId,
+        },
+      });
+    }
+    useMapStore.getState().calculatePath();
+    setShowOriginSuggestions(false);
+  };
+
+  const handleSelectDestination = (nodeId: string | null) => {
+    const state = useMapStore.getState();
+    if (!nodeId) {
+      setDestSearchText('');
+      handleClear();
+      setShowDestSuggestions(false);
+      return;
+    }
+
+    const name = getRoomNameForNode(nodeId);
+    setDestSearchText(name);
+
+    let originId = state.navigation.originNodeId;
+    if (!isOriginCustom || !originId) {
+      const floorNodes = state.navNodes.filter((n) => n.floor === state.currentFloor);
+      let nearestOrigin = floorNodes[0];
+      if (state.userPosition) {
+        let minDist = Infinity;
+        for (const node of floorNodes) {
+          const dist = Math.hypot(node.position.x - state.userPosition.x, node.position.z - state.userPosition.z);
+          if (dist < minDist) {
+            minDist = dist;
+            nearestOrigin = node;
+          }
+        }
+      }
+      originId = nearestOrigin?.id ?? null;
+    }
+
+    useMapStore.setState({
+      navigation: {
+        ...state.navigation,
+        originNodeId: originId,
+        destinationNodeId: nodeId,
+      },
+    });
+    useMapStore.getState().calculatePath();
+    setShowDestSuggestions(false);
+
+    if (window.innerWidth <= 768) {
+      setIsMobileCollapsed(true);
+    }
+  };
+
+  const handleSwapRoute = () => {
+    const currentOrigin = navigation.originNodeId;
+    const currentDest = navigation.destinationNodeId;
+    if (!currentOrigin && !currentDest) return;
+
+    const newDest = currentOrigin;
+    const newOrigin = currentDest;
+
+    if (newOrigin) {
+      setIsOriginCustom(true);
+      setOriginSearchText(getRoomNameForNode(newOrigin));
+    } else {
+      setIsOriginCustom(false);
+      setOriginSearchText('');
+    }
+
+    if (newDest) {
+      setDestSearchText(getRoomNameForNode(newDest));
+    } else {
+      setDestSearchText('');
+    }
+
+    useMapStore.setState({
+      navigation: {
+        ...navigation,
+        originNodeId: newOrigin,
+        destinationNodeId: newDest,
+      },
+    });
+    useMapStore.getState().calculatePath();
+  };
 
   return (
     <div
@@ -81,7 +200,7 @@ export function UIPanel() {
           : { maxHeight: 'min(86vh, 720px)' }),
       }}
     >
-      {/* ── Header vuốt chạm phong cách iOS ── */}
+      {}
       <div
         onClick={() => setIsMobileCollapsed((prev) => !prev)}
         style={styles.header}
@@ -110,7 +229,7 @@ export function UIPanel() {
         </div>
       </div>
 
-      {/* ── Thân cuộn mượt mà ── */}
+      {}
       <div
         style={{
           overflowY: 'auto',
@@ -122,7 +241,7 @@ export function UIPanel() {
           padding: '12px 16px 20px',
         }}
       >
-        {/* ── 1. Chọn Tầng (iOS Segmented Pill Bar) ── */}
+        {}
         <div style={styles.segmentedContainer}>
           {floors.map((floor) => {
             const active = currentFloor === floor.id;
@@ -141,110 +260,154 @@ export function UIPanel() {
           })}
         </div>
 
-        {/* ── 2. Thanh Tìm Kiếm Google Maps ── */}
-        <div style={styles.searchWrapper}>
-          <span style={styles.searchIcon}>🔍</span>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Tìm phòng khám, khoa điều trị..."
-            style={styles.searchInput}
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              style={styles.searchClearBtn}
-            >
-              ✕
-            </button>
-          )}
-        </div>
-
-        {/* ── 3. Khung Dẫn Đường Chuẩn Google Maps (Điểm đi = Vị trí của bạn) ── */}
-        <div style={styles.routeCard}>
-
-          {/* Điểm đi cố định: Vị trí của bạn */}
-          <div style={styles.routeRow}>
-            <div style={styles.pointIndicatorOrigin} />
-            <div style={{ flex: 1 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#60a5fa' }}>
-                Vị trí của bạn
-              </span>
-            </div>
-          </div>
-
-
-          <div style={styles.routeDivider} />
-
-          {/* Điểm đến: Chọn phòng là dẫn đường ngay */}
-          <div style={styles.routeRow}>
-            <div style={styles.pointIndicatorDest} />
-            <select
-              value={navigation.destinationNodeId ?? ''}
-              onChange={(e) => {
-                const destId = e.target.value;
-                if (destId) {
-                  // Tự động gán điểm đi = node gần vị trí người dùng nhất
-                  const state = useMapStore.getState();
-                  const floorNodes = state.navNodes.filter((n) => n.floor === state.currentFloor);
-                  let nearestOrigin = floorNodes[0];
-                  if (state.userPosition) {
-                    let minDist = Infinity;
-                    for (const node of floorNodes) {
-                      const dist = Math.hypot(node.position.x - state.userPosition.x, node.position.z - state.userPosition.z);
-                      if (dist < minDist) {
-                        minDist = dist;
-                        nearestOrigin = node;
-                      }
+        {}
+        <div ref={routeCardRef} style={styles.routeCard}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {}
+              <div style={{ position: 'relative' }}>
+                <div style={styles.routeRow}>
+                  <div style={styles.pointIndicatorOrigin} />
+                  <input
+                    type="text"
+                    value={
+                      isOriginCustom
+                        ? originSearchText
+                        : 'Vị trí của bạn'
                     }
-                  }
-                  useMapStore.setState({
-                    navigation: {
-                      ...state.navigation,
-                      originNodeId: nearestOrigin?.id ?? null,
-                      destinationNodeId: destId,
-                    },
-                  });
-                  useMapStore.getState().calculatePath();
-                  if (window.innerWidth <= 768) {
-                    setIsMobileCollapsed(true);
-                  }
-                } else {
-                  handleClear();
-                }
-              }}
-              style={styles.routeSelect}
+                    placeholder="Vị trí của bạn"
+                    onFocus={(e) => {
+                      if (!isOriginCustom) {
+                        e.target.select();
+                      }
+                      setShowOriginSuggestions(true);
+                    }}
+                    onChange={(e) => {
+                      setOriginSearchText(e.target.value);
+                      setIsOriginCustom(true);
+                      setShowOriginSuggestions(true);
+                    }}
+                    style={{
+                      ...styles.routeInput,
+                      color: !isOriginCustom ? '#60a5fa' : '#ffffff',
+                      fontWeight: !isOriginCustom ? 700 : 500,
+                    }}
+                  />
+                  {isOriginCustom && (
+                    <button
+                      type="button"
+                      onClick={() => handleSelectOrigin(null)}
+                      style={styles.fieldClearBtn}
+                      title="Đặt lại về Vị trí của bạn"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {}
+                {showOriginSuggestions && (
+                  <div style={styles.suggestionsDropdown}>
+                    <div
+                      onClick={() => handleSelectOrigin(null)}
+                      style={{
+                        ...styles.suggestionItem,
+                        color: '#60a5fa',
+                        fontWeight: 700,
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                      }}
+                    >
+                      📍 Vị trí của bạn (GPS / Beacon tự động)
+                    </div>
+                    {originSuggestions.length === 0 ? (
+                      <div style={styles.suggestionEmpty}>Không tìm thấy phòng</div>
+                    ) : (
+                      originSuggestions.map((node) => (
+                        <div
+                          key={node.id}
+                          onClick={() => handleSelectOrigin(node.id)}
+                          style={styles.suggestionItem}
+                        >
+                          <span style={{ color: '#94a3b8', marginRight: 6 }}>🚪</span>
+                          {getRoomNameForNode(node.id)}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div style={styles.routeDivider} />
+
+              {}
+              <div style={{ position: 'relative' }}>
+                <div style={styles.routeRow}>
+                  <div style={styles.pointIndicatorDest} />
+                  <input
+                    type="text"
+                    value={
+                      navigation.destinationNodeId && !destSearchText
+                        ? getRoomNameForNode(navigation.destinationNodeId)
+                        : destSearchText
+                    }
+                    placeholder="Chọn hoặc nhập phòng muốn đến..."
+                    onFocus={() => setShowDestSuggestions(true)}
+                    onChange={(e) => {
+                      setDestSearchText(e.target.value);
+                      setShowDestSuggestions(true);
+                    }}
+                    style={styles.routeInput}
+                  />
+                  {(destSearchText || navigation.destinationNodeId) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDestSearchText('');
+                        handleClear();
+                      }}
+                      style={styles.fieldClearBtn}
+                      title="Hủy điểm đến"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {}
+                {showDestSuggestions && (
+                  <div style={styles.suggestionsDropdown}>
+                    {destSuggestions.length === 0 ? (
+                      <div style={styles.suggestionEmpty}>Không tìm thấy phòng</div>
+                    ) : (
+                      destSuggestions.map((node) => (
+                        <div
+                          key={node.id}
+                          onClick={() => handleSelectDestination(node.id)}
+                          style={styles.suggestionItem}
+                        >
+                          <span style={{ color: '#ef4444', marginRight: 6 }}>📍</span>
+                          {getRoomNameForNode(node.id)}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {}
+            <button
+              type="button"
+              onClick={handleSwapRoute}
+              style={styles.swapBtn}
+              title="Đổi chiều đi (Hoán đổi điểm xuất phát và điểm đến)"
             >
-              <option value="">🔍 Chạm để chọn phòng bạn muốn đến...</option>
-              {roomNodes.map((n) => (
-                <option key={n.id} value={n.id}>
-                  {getRoomNameForNode(n.id)}
-                </option>
-              ))}
-            </select>
-            {navigation.destinationNodeId && (
-              <button
-                type="button"
-                onClick={handleClear}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#94a3b8',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  padding: '4px 8px',
-                }}
-                title="Hủy đường dẫn"
-              >
-                ✕
-              </button>
-            )}
+              ⇅
+            </button>
           </div>
         </div>
 
-
-        {/* ── 5. Danh Sách Phòng Theo Tầng ── */}
+        {}
         <div style={styles.roomListSection}>
           <div style={styles.sectionHeader}>
             <span style={styles.sectionTitle}>
@@ -268,12 +431,6 @@ export function UIPanel() {
                   }}
                   style={styles.roomCard}
                 >
-                  <div
-                    style={{
-                      ...styles.roomDotBadge,
-                      backgroundColor: room.color || '#3b82f6',
-                    }}
-                  />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={styles.roomCardName}>{room.name}</div>
                     {room.description && (
@@ -286,102 +443,17 @@ export function UIPanel() {
             )}
           </div>
         </div>
-
-        {/* ── 6. Cài đặt Kỹ thuật & Quản lý BLE Beacon (Thu gọn vào Accordion) ── */}
-        <div style={styles.bleAccordion}>
-          <button
-            type="button"
-            onClick={() => setShowBleSettings((v) => !v)}
-            style={styles.accordionHeader}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>⚙️</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8' }}>
-                Cài đặt & Định vị Beacon ({beacons.length})
-              </span>
-            </div>
-            <span style={{ fontSize: 11, color: '#64748b' }}>
-              {showBleSettings ? 'Đóng ▲' : 'Mở ▼'}
-            </span>
-          </button>
-
-          {showBleSettings && (
-            <div style={styles.accordionBody}>
-              <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                <button
-                  onClick={async () => {
-                    setBleStatusText('Đang mở cổng USB...');
-                    const success = await activateBeaconViaUsbRunInRam((log) =>
-                      setBleStatusText(log)
-                    );
-                    if (success) simulateNearestBeacon(1);
-                  }}
-                  style={styles.techBtnAmber}
-                >
-                  🔌 Nạp RAM USB
-                </button>
-                <button
-                  onClick={async () => {
-                    if (isBleScanning) {
-                      setBleScanning(false);
-                      setBleStatusText('Đã dừng quét Bluetooth');
-                      return;
-                    }
-                    setBleStatusText('Đang quét sóng iBeacon...');
-                    const success = await startWebBleBeaconScanner(
-                      (minor, rssi) => {
-                        setBleStatusText(`Bắt được Beacon ${minor} (${rssi} dBm)`);
-                        simulateNearestBeacon(minor);
-                      }
-                    );
-                    if (success) setBleScanning(true);
-                  }}
-                  style={isBleScanning ? styles.techBtnGreen : styles.techBtnSky}
-                >
-                  {isBleScanning ? '📶 Đang quét' : '⚡ Quét BLE'}
-                </button>
-                <button onClick={toggleShowBeacons} style={styles.techBtnGray}>
-                  {showBeacons ? 'Ẩn 3D' : 'Hiện 3D'}
-                </button>
-              </div>
-
-              {bleStatusText && (
-                <div style={styles.techStatusBox}>{bleStatusText}</div>
-              )}
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {beacons.map((b) => {
-                  const isCurrent = activeBeaconMinor === b.minor;
-                  return (
-                    <div
-                      key={b.id}
-                      onClick={() => simulateNearestBeacon(b.minor)}
-                      style={{
-                        ...styles.beaconPill,
-                        ...(isCurrent ? styles.beaconPillActive : {}),
-                      }}
-                    >
-                      <span>{isCurrent ? '🟢' : '📡'} {b.name}</span>
-                      <span style={{ color: '#64748b', fontSize: 10 }}>M:{b.minor}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
 }
 
-// ── Bảng màu & Style CSS Chuẩn Mobile Google Maps ──
 const styles: Record<string, React.CSSProperties> = {
   container: {
     position: 'absolute',
     top: 16,
     left: 16,
-    bottom: 16,
+    maxHeight: 'calc(100vh - 32px)',
     width: 340,
     background: 'rgba(15, 23, 42, 0.88)',
     backdropFilter: 'blur(28px) saturate(190%)',
@@ -594,6 +666,71 @@ const styles: Record<string, React.CSSProperties> = {
     outline: 'none',
     cursor: 'pointer',
   },
+  routeInput: {
+    flex: 1,
+    background: 'transparent',
+    border: 'none',
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: 500,
+    outline: 'none',
+    padding: '4px 0',
+    width: '100%',
+  },
+  fieldClearBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#94a3b8',
+    cursor: 'pointer',
+    fontSize: 12,
+    padding: '2px 6px',
+    lineHeight: 1,
+  },
+  swapBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    background: 'rgba(255, 255, 255, 0.08)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    color: '#38bdf8',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 16,
+    fontWeight: 'bold',
+    transition: 'all 0.2s',
+    flexShrink: 0,
+  },
+  suggestionsDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 20,
+    right: 0,
+    maxHeight: 180,
+    overflowY: 'auto',
+    background: '#1e293b',
+    border: '1px solid rgba(255, 255, 255, 0.15)',
+    borderRadius: 10,
+    boxShadow: '0 12px 28px rgba(0, 0, 0, 0.5)',
+    zIndex: 100,
+    marginTop: 4,
+  },
+  suggestionItem: {
+    padding: '8px 12px',
+    fontSize: 12,
+    color: '#f1f5f9',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'background 0.15s',
+  },
+  suggestionEmpty: {
+    padding: '10px 12px',
+    fontSize: 12,
+    color: '#64748b',
+    fontStyle: 'italic',
+  },
   btnNavPrimary: {
     flex: 1,
     padding: '10px 14px',
@@ -624,6 +761,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: 8,
+    flex: 1,
+    minHeight: 0,
   },
   sectionHeader: {
     display: 'flex',
@@ -641,7 +780,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: 6,
-    maxHeight: 210,
+    maxHeight: 'min(42vh, 380px)',
     overflowY: 'auto',
   },
   emptyState: {

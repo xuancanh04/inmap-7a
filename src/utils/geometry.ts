@@ -1,16 +1,5 @@
-// ============================================================================
-// InMap 7A — geometry.ts
-// Các thuật toán tính toán hình học: Tâm đa giác (Centroid), diện tích, bounding box
-// ============================================================================
-
 import type { Point2D, PolygonVertex } from '../types';
 
-/**
- * Tính tâm hình học thực sự (Polygon Centroid) của đa giác bất kỳ.
- * Sử dụng công thức Shoelace / Green's theorem để tính trọng tâm diện tích chính xác,
- * thay vì chỉ lấy trung bình cộng đơn thuần (arithmetic mean).
- * Nếu đa giác thoái hóa (diện tích xấp xỉ 0), tự động fallback về trung bình cộng.
- */
 export function calculatePolygonCentroid(vertices: PolygonVertex[]): Point2D {
   if (!vertices || vertices.length === 0) {
     return { x: 0, z: 0 };
@@ -34,7 +23,6 @@ export function calculatePolygonCentroid(vertices: PolygonVertex[]): Point2D {
     const current = vertices[i];
     const next = vertices[(i + 1) % n];
 
-    // Shoelace formula cross product: (x_i * z_{i+1} - x_{i+1} * z_i)
     const cross = current.x * next.z - next.x * current.z;
     signedArea += cross;
     cx += (current.x + next.x) * cross;
@@ -43,7 +31,6 @@ export function calculatePolygonCentroid(vertices: PolygonVertex[]): Point2D {
 
   signedArea *= 0.5;
 
-  // Nếu diện tích quá bé (điểm thẳng hàng), dùng trung bình số học
   if (Math.abs(signedArea) < 1e-5) {
     const sum = vertices.reduce(
       (acc, v) => ({ x: acc.x + v.x, z: acc.z + v.z }),
@@ -64,9 +51,6 @@ export function calculatePolygonCentroid(vertices: PolygonVertex[]): Point2D {
   };
 }
 
-/**
- * Tính diện tích mặt sàn phòng (m2) từ các đỉnh polygon
- */
 export function calculatePolygonArea(vertices: PolygonVertex[]): number {
   if (!vertices || vertices.length < 3) return 0;
   let area = 0;
