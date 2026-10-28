@@ -1,50 +1,47 @@
-// ============================================================================
-// InMap 7A — Zustand Global Store
-// Quản lý trạng thái toàn cục: tầng, phòng, điều hướng, vị trí người dùng
-// ============================================================================
-
 import { create } from 'zustand';
 import type { Room, NavNode, NavEdge, NavigationState, Point2D, Floor, BeaconDevice } from '../types';
 import { findShortestPath } from '../utils/pathfinding';
 
 export interface MapStoreState {
-  // ── Dữ liệu tầng ──
+
   floors: Floor[];
   currentFloor: number;
 
-  // ── Dữ liệu phòng ──
   rooms: Room[];
 
-  // ── Thiết bị BLE Beacons DFRobot ──
   beacons: BeaconDevice[];
   showBeacons: boolean;
   isBleScanning: boolean;
   activeBeaconMinor: number | null;
 
-  // ── Mạng lưới dẫn đường ──
   navNodes: NavNode[];
   navEdges: NavEdge[];
 
-  // ── Vị trí người dùng & La bàn ──
   userPosition: Point2D | null;
-  deviceHeading: number | null; // Góc xoay theo độ (0 - 360) từ cảm biến la bàn điện thoại
+  deviceHeading: number | null;
   isSimulatingWalk: boolean;
 
-  // ── Điều hướng ──
   navigation: NavigationState;
+  isFollowingUser: boolean;
+  cameraRotationAngle: number;
+  setCameraRotationAngle: (angle: number) => void;
+  resetNorthTrigger: number;
+  triggerResetNorth: () => void;
+  recenterUserTrigger: number;
+  triggerRecenterUser: () => void;
+  zoomInTrigger: number;
+  triggerZoomIn: () => void;
+  zoomOutTrigger: number;
+  triggerZoomOut: () => void;
 
-  // ── Admin Tool ──
   adminMode: boolean;
   clickedCoords: Point2D[];
 
-  // ── Visual 3D Room Builder ──
   builderMode: boolean;
   builderPoints: Point2D[];
 
-  // ── Chế độ Toàn Cảnh Tòa Nhà 3 Tầng (3D Multi-Floor Stacking) ──
   building3DMode: boolean;
 
-  // ── Actions ──
   setCurrentFloor: (floor: number) => void;
   toggleBuilding3DMode: () => void;
   setRooms: (rooms: Room[]) => void;
@@ -63,16 +60,15 @@ export interface MapStoreState {
   setDestination: (nodeId: string | null) => void;
   calculatePath: () => void;
   clearNavigation: () => void;
-  /** Chọn phòng làm điểm đến → tự tìm node gần nhất rồi tính đường */
-  navigateToRoom: (roomId: string) => void;
 
-  // ── Admin Actions ──
+  navigateToRoom: (roomId: string) => void;
+  setIsFollowingUser: (following: boolean) => void;
+
   toggleAdminMode: () => void;
   addClickedCoord: (coord: Point2D) => void;
   removeClickedCoord: (index: number) => void;
   clearClickedCoords: () => void;
 
-  // ── Builder Actions ──
   toggleBuilderMode: () => void;
   addBuilderPoint: (point: Point2D) => void;
   popBuilderPoint: () => void;
@@ -80,7 +76,7 @@ export interface MapStoreState {
 }
 
 export const useMapStore = create<MapStoreState>((set, get) => ({
-  // ── Initial State ──
+
   floors: [],
   currentFloor: 1,
   rooms: [],
@@ -98,13 +94,23 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
     destinationNodeId: null,
     path: [],
   },
+  isFollowingUser: false,
+  cameraRotationAngle: 0,
+  setCameraRotationAngle: (angle) => set({ cameraRotationAngle: angle }),
+  resetNorthTrigger: 0,
+  triggerResetNorth: () => set((s) => ({ resetNorthTrigger: s.resetNorthTrigger + 1 })),
+  recenterUserTrigger: 0,
+  triggerRecenterUser: () => set((s) => ({ recenterUserTrigger: s.recenterUserTrigger + 1, isFollowingUser: true })),
+  zoomInTrigger: 0,
+  triggerZoomIn: () => set((s) => ({ zoomInTrigger: s.zoomInTrigger + 1 })),
+  zoomOutTrigger: 0,
+  triggerZoomOut: () => set((s) => ({ zoomOutTrigger: s.zoomOutTrigger + 1 })),
   adminMode: false,
   clickedCoords: [],
   builderMode: false,
   builderPoints: [],
-  building3DMode: false, // Mặc định hiển thị mặt phẳng tầng 1 để định vị rõ ràng
+  building3DMode: false,
 
-  // ── Actions ──
   setCurrentFloor: (floor) => set({ currentFloor: floor }),
   toggleBuilding3DMode: () => set((state) => ({ building3DMode: !state.building3DMode })),
 
@@ -149,7 +155,7 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
       const pA = waypoints[currentSegmentIndex];
       const pB = waypoints[currentSegmentIndex + 1];
       const dist = Math.hypot(pB.x - pA.x, pB.z - pA.z) || 1;
-      const step = 0.35 / dist; // Tốc độ bước chân khoảng 1.2m/s
+      const step = 0.35 / dist;
       progress += step;
 
       if (progress >= 1) {
@@ -167,7 +173,6 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
       const curX = currA.x + (currB.x - currA.x) * progress;
       const curZ = currA.z + (currB.z - currA.z) * progress;
 
-      // Tính góc quay theo hướng bước chân
       const angleDeg = ((Math.atan2(currB.x - currA.x, currB.z - currA.z) * 180) / Math.PI + 360) % 360;
 
       set({
@@ -177,19 +182,16 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
     }, 50);
   },
 
-
   simulateNearestBeacon: (minor) => {
     const { beacons, navNodes, currentFloor } = get();
     const beacon = beacons.find((b) => b.minor === minor);
     if (!beacon) return;
 
-    // Cập nhật vị trí người dùng theo beacon
     set({
       userPosition: beacon.position,
       activeBeaconMinor: minor,
     });
 
-    // Tự động tìm NavNode gần nhất làm originNodeId và tính lại đường đi nếu đã chọn điểm đến
     const floorNodes = navNodes.filter((n) => n.floor === currentFloor);
     let nearestNode: NavNode | null = null;
     let minDist = Infinity;
@@ -233,7 +235,6 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
       return;
     }
 
-    // Lọc nodes & edges theo tầng hiện tại
     const floorNodes = navNodes.filter((n) => n.floor === currentFloor);
     const floorNodeIds = new Set(floorNodes.map((n) => n.id));
     const floorEdges = navEdges.filter(
@@ -257,17 +258,28 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
         destinationNodeId: null,
         path: [],
       },
+      isFollowingUser: false,
+  cameraRotationAngle: 0,
+  setCameraRotationAngle: (angle) => set({ cameraRotationAngle: angle }),
+  resetNorthTrigger: 0,
+  triggerResetNorth: () => set((s) => ({ resetNorthTrigger: s.resetNorthTrigger + 1 })),
+  recenterUserTrigger: 0,
+  triggerRecenterUser: () => set((s) => ({ recenterUserTrigger: s.recenterUserTrigger + 1, isFollowingUser: true })),
+  zoomInTrigger: 0,
+  triggerZoomIn: () => set((s) => ({ zoomInTrigger: s.zoomInTrigger + 1 })),
+  zoomOutTrigger: 0,
+  triggerZoomOut: () => set((s) => ({ zoomOutTrigger: s.zoomOutTrigger + 1 })),
     }),
+
+  setIsFollowingUser: (following) => set({ isFollowingUser: following }),
 
   navigateToRoom: (roomId) => {
     const { navNodes, currentFloor, userPosition } = get();
     const floorNodes = navNodes.filter((n) => n.floor === currentFloor);
 
-    // Tìm node đích liên kết với phòng
     const destNode = floorNodes.find((n) => n.roomId === roomId);
     if (!destNode) return;
 
-    // Tìm node xuất phát gần vị trí người dùng nhất
     let originNode: NavNode | null = null;
     if (userPosition) {
       let minDist = Infinity;
@@ -281,7 +293,7 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
         }
       }
     } else {
-      // Không có vị trí → lấy node đầu tiên làm mặc định
+
       originNode = floorNodes[0] ?? null;
     }
 
@@ -296,16 +308,14 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
       },
     }));
 
-    // Tính đường đi sau khi set origin/dest
     get().calculatePath();
   },
 
-  // ── Admin Actions ──
   toggleAdminMode: () => set((state) => ({ adminMode: !state.adminMode })),
 
   addClickedCoord: (coord) =>
     set((state) => ({
-      clickedCoords: [...state.clickedCoords, coord].slice(-20), // Giữ tối đa 20 điểm
+      clickedCoords: [...state.clickedCoords, coord].slice(-20),
     })),
 
   removeClickedCoord: (index) =>
@@ -315,11 +325,10 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
 
   clearClickedCoords: () => set({ clickedCoords: [] }),
 
-  // ── Builder Actions ──
   toggleBuilderMode: () =>
     set((state) => ({
       builderMode: !state.builderMode,
-      // Khi bật builder thì tắt admin và ngược lại để tránh xung đột
+
       ...(state.builderMode ? {} : { adminMode: false }),
     })),
 

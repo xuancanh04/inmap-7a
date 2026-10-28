@@ -1,14 +1,8 @@
-// ============================================================================
-// InMap 7A — RoomListManager.tsx
-// Bảng quản lý danh sách phòng + Batch 3D Extruder + Xuất dữ liệu JSON
-// ============================================================================
-
 import { useState, useCallback, useMemo } from 'react';
 import { useMapStore } from '../store/useMapStore';
 import { calculatePolygonCentroid, calculatePolygonArea } from '../utils/geometry';
 import type { Room } from '../types';
 
-/** Nhóm chức năng phòng bệnh viện & màu sắc nhận diện tương ứng */
 const FUNCTION_GROUPS = [
   { id: 'medical', label: 'Y tế / Cấp cứu / Khám', color: '#EF4444', badge: 'bg-red-500/20 text-red-400 border-red-500/30' },
   { id: 'office', label: 'Hành chính / Điều hành', color: '#3B82F6', badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
@@ -28,18 +22,15 @@ export function RoomListManager() {
   const builderMode = useMapStore((s) => s.builderMode);
   const toggleBuilderMode = useMapStore((s) => s.toggleBuilderMode);
 
-  // Form input state
   const [roomName, setRoomName] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<typeof FUNCTION_GROUPS[number]['id']>('medical');
   const [filterSearch, setFilterSearch] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Lấy màu tương ứng với nhóm
   const currentColor = useMemo(() => {
     return FUNCTION_GROUPS.find((g) => g.id === selectedGroup)?.color || '#3B82F6';
   }, [selectedGroup]);
 
-  // Tự động tính tâm đa giác (Centroid) chính xác từ các điểm đang chấm
   const currentCentroid = useMemo(() => {
     return calculatePolygonCentroid(builderPoints);
   }, [builderPoints]);
@@ -48,7 +39,6 @@ export function RoomListManager() {
     return calculatePolygonArea(builderPoints);
   }, [builderPoints]);
 
-  // 1. Thêm phòng mới vào hệ thống (Tự động đùn 3D ngay lập tức)
   const handleCreateRoom = useCallback(() => {
     if (builderPoints.length < 3) {
       alert('Vui lòng click ít nhất 3 hoặc 4 điểm góc trên bản vẽ để tạo phòng!');
@@ -83,7 +73,6 @@ export function RoomListManager() {
     clearBuilderPoints,
   ]);
 
-  // 2. Xuất dữ liệu JSON chuẩn
   const handleExportJSON = useCallback(() => {
     const exportData = {
       hospital: 'Bệnh viện Quân y 7A',
@@ -114,7 +103,6 @@ export function RoomListManager() {
     URL.revokeObjectURL(url);
   }, [rooms, currentFloor]);
 
-  // Danh sách phòng tầng hiện tại
   const filteredRooms = useMemo(() => {
     return rooms
       .filter((r) => r.floor === currentFloor)
@@ -125,7 +113,7 @@ export function RoomListManager() {
 
   return (
     <div style={styles.container}>
-      {/* ── Header ── */}
+      {}
       <div style={styles.header}>
         <div style={styles.headerTitleRow}>
           <span style={styles.headerIcon}>🏢</span>
@@ -154,7 +142,7 @@ export function RoomListManager() {
 
       {!isCollapsed && (
         <>
-          {/* ── Khung nhập liệu tạo phòng ── */}
+          {}
           <div style={styles.section}>
             <div style={styles.sectionHeader}>
               <span style={styles.sectionTitle}>1. Tạo khối phòng mới</span>
@@ -163,7 +151,7 @@ export function RoomListManager() {
               </span>
             </div>
 
-            {/* Trạng thái click tọa độ 4 góc */}
+            {}
             <div style={styles.pointsStatus}>
               {builderPoints.length === 0 ? (
                 <div style={styles.pointsHint}>
@@ -194,7 +182,7 @@ export function RoomListManager() {
               )}
             </div>
 
-            {/* Nhập tên phòng */}
+            {}
             <div style={styles.inputGroup}>
               <label style={styles.label}>Tên phòng:</label>
               <input
@@ -206,7 +194,7 @@ export function RoomListManager() {
               />
             </div>
 
-            {/* Chọn nhóm chức năng */}
+            {}
             <div style={styles.inputGroup}>
               <label style={styles.label}>Nhóm chức năng & Màu nhận diện:</label>
               <select
@@ -222,7 +210,7 @@ export function RoomListManager() {
               </select>
             </div>
 
-            {/* Nút bấm tự động đùn 3D */}
+            {}
             <button
               onClick={handleCreateRoom}
               disabled={builderPoints.length < 3}
@@ -235,7 +223,7 @@ export function RoomListManager() {
             </button>
           </div>
 
-          {/* ── Danh sách các phòng đã dựng trên tầng ── */}
+          {}
           <div style={styles.section}>
             <div style={styles.sectionHeader}>
               <span style={styles.sectionTitle}>
@@ -246,7 +234,7 @@ export function RoomListManager() {
               </button>
             </div>
 
-            {/* Tìm kiếm phòng */}
+            {}
             <input
               type="text"
               placeholder="🔍 Tìm nhanh phòng..."
@@ -255,7 +243,7 @@ export function RoomListManager() {
               style={styles.searchBar}
             />
 
-            {/* Danh sách cuộn */}
+            {}
             <div style={styles.roomList}>
               {filteredRooms.length === 0 ? (
                 <div style={styles.emptyText}>Chưa có phòng nào trên tầng {currentFloor}.</div>

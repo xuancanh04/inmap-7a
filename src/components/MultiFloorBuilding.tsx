@@ -1,8 +1,3 @@
-// ============================================================================
-// InMap 7A — MultiFloorBuilding.tsx
-// Ghép 3 tầng lại với nhau thành mô hình tòa nhà 3D hoàn chỉnh
-// ============================================================================
-
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
@@ -10,7 +5,6 @@ import { useMapStore } from '../store/useMapStore';
 import { RoomModel } from './RoomModel';
 import { FloorPlan } from './FloorPlan';
 
-/** Khoảng cách độ cao giữa các tầng (mét) khi xếp chồng */
 const FLOOR_HEIGHT_STEP = 7.5;
 
 interface MultiFloorBuildingProps {
@@ -26,7 +20,6 @@ export function MultiFloorBuilding({ width, depth }: MultiFloorBuildingProps) {
   const adminMode = useMapStore((s) => s.adminMode);
   const builderMode = useMapStore((s) => s.builderMode);
 
-  // Danh sách 3 tầng (Tầng Trệt: 0, Tầng 1: 1, Tầng 2: 2)
   const floorList = useMemo(() => {
     return [0, 1, 2].map((fId) => {
       const fl = floors.find((f) => f.id === fId);
@@ -54,7 +47,7 @@ export function MultiFloorBuilding({ width, depth }: MultiFloorBuildingProps) {
             key={`floor-group-${f.id}`}
             position={[0, f.yOffset, 0]}
           >
-            {/* ── 1. Mặt sàn bản vẽ & Lưới của tầng ── */}
+            {}
             <FloorPlan
               width={width}
               depth={depth}
@@ -63,14 +56,14 @@ export function MultiFloorBuilding({ width, depth }: MultiFloorBuildingProps) {
               floorId={f.id}
             />
 
-            {/* ── 2. Các khối phòng 3D kiến trúc của tầng ── */}
+            {}
             <group>
               {f.rooms.map((room) => (
                 <RoomModel key={room.id} room={room} wallHeight={2.8} />
               ))}
             </group>
 
-            {/* ── 3. Tấm kính bảo vệ thông tầng trong suốt (Slab edge) ── */}
+            {}
             <mesh
               position={[centerX, -0.15, centerZ]}
               rotation={[-Math.PI / 2, 0, 0]}
@@ -86,7 +79,7 @@ export function MultiFloorBuilding({ width, depth }: MultiFloorBuildingProps) {
               />
             </mesh>
 
-            {/* ── 4. Bảng nhãn tên tầng nổi bên cạnh tòa nhà (Click để chọn nhanh tầng) ── */}
+            {}
             <Html
               position={[-4, 2.5, centerZ]}
               center
@@ -113,7 +106,7 @@ export function MultiFloorBuilding({ width, depth }: MultiFloorBuildingProps) {
         );
       })}
 
-      {/* ── 4 Trụ kiến trúc kính cường lực nối các tầng (Architectural Pillars) ── */}
+      {}
       {[
         [-0.5, -0.5],
         [width + 0.5, -0.5],

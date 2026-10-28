@@ -1,8 +1,3 @@
-// ============================================================================
-// InMap 7A — HospitalWallMesh.tsx
-// Dựng tường rỗng kiến trúc thực tế (Hollow Room Walls) có khe cửa ra vào
-// ============================================================================
-
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useLoader } from '@react-three/fiber';
@@ -23,11 +18,6 @@ interface HospitalWallMeshProps {
   center?: { x: number; z: number };
 }
 
-/**
- * Tạo hệ thống tường kiến trúc 3D thực tế cho phòng:
- * - Hỗ trợ đặt cửa theo tọa độ chính xác từng centimet (doorPositions) khớp 100% bản vẽ 2D
- * - Hoặc tự động tính toán theo doorSide / doorSides / doorCount
- */
 export function HospitalWallMesh({
   polygon,
   wallHeight = 2.8,
@@ -54,12 +44,11 @@ export function HospitalWallMesh({
     const roomCx = center?.x ?? polygon.reduce((acc, p) => acc + p.x, 0) / n;
     const roomCz = center?.z ?? polygon.reduce((acc, p) => acc + p.z, 0) / n;
 
-    // Xác định các cạnh được phép khoét cửa
-    const doorEdgeMap = new Map<number, number>(); // edgeIndex -> number of doors
+    const doorEdgeMap = new Map<number, number>();
 
     if (hasDoor) {
       if (doorSides && doorSides.length > 0) {
-        // Nhiều cạnh mở cửa
+
         for (const side of doorSides) {
           let bestScore = -Infinity;
           let bestIdx = -1;
@@ -87,7 +76,7 @@ export function HospitalWallMesh({
           }
         }
       } else if (doorSide !== 'none') {
-        // 1 cạnh mở cửa với số lượng doorCount cửa
+
         let targetIdx = -1;
         if (doorSide === 'auto') {
           let maxLen = -1;
@@ -137,11 +126,10 @@ export function HospitalWallMesh({
       const wallLen = Math.sqrt(dx * dx + dz * dz);
       const angle = Math.atan2(dz, dx);
 
-      // Kiểm tra xem có doorPositions nào nằm trên cạnh này không
       const matchedDoorOffsets: number[] = [];
       if (hasDoor && doorPositions && doorPositions.length > 0) {
         for (const dp of doorPositions) {
-          // Tính khoảng cách từ dp đến đoạn thẳng p1-p2
+
           const segDx = dx / wallLen;
           const segDz = dz / wallLen;
           const proj = (dp.x - p1.x) * segDx + (dp.z - p1.z) * segDz;
@@ -156,7 +144,7 @@ export function HospitalWallMesh({
       const numDoors = matchedDoorOffsets.length > 0 ? matchedDoorOffsets.length : (doorEdgeMap.get(i) ?? 0);
 
       if (numDoors === 0 || wallLen < numDoors * doorWidth + 0.2) {
-        // Tường đặc không có cửa
+
         const midX = (p1.x + p2.x) / 2;
         const midZ = (p1.z + p2.z) / 2;
         segments.push({
@@ -166,7 +154,7 @@ export function HospitalWallMesh({
           isHeader: false,
         });
       } else if (matchedDoorOffsets.length > 0) {
-        // Có tọa độ cửa chính xác: sắp xếp các offset tăng dần
+
         matchedDoorOffsets.sort((a, b) => a - b);
         const doorHeight = 2.1;
         const headerHeight = wallHeight - doorHeight;
@@ -189,7 +177,6 @@ export function HospitalWallMesh({
             });
           }
 
-          // Dầm cửa
           const dMid = doorStart + actualDW / 2;
           const dt = dMid / wallLen;
           segments.push({
@@ -214,7 +201,7 @@ export function HospitalWallMesh({
           });
         }
       } else {
-        // Tường có numDoors cửa phân bố đều
+
         const doorHeight = 2.1;
         const headerHeight = wallHeight - doorHeight;
         const totalDoorWidth = numDoors * doorWidth;
@@ -224,7 +211,7 @@ export function HospitalWallMesh({
         let currentDist = 0;
 
         for (let d = 0; d < numDoors; d++) {
-          // Đoạn tường (trụ) trước cửa
+
           const wallSegCenterDist = currentDist + pillarWidth / 2;
           const tWall = wallSegCenterDist / wallLen;
           segments.push({
@@ -235,7 +222,6 @@ export function HospitalWallMesh({
           });
           currentDist += pillarWidth;
 
-          // Ô cửa: dầm ngang trên đỉnh cửa
           const doorCenterDist = currentDist + doorWidth / 2;
           const tDoor = doorCenterDist / wallLen;
           segments.push({
@@ -247,7 +233,6 @@ export function HospitalWallMesh({
           currentDist += doorWidth;
         }
 
-        // Đoạn tường cuối cùng sau cửa cuối
         const lastWallSegCenterDist = currentDist + pillarWidth / 2;
         const tLast = lastWallSegCenterDist / wallLen;
         segments.push({
@@ -262,10 +247,8 @@ export function HospitalWallMesh({
     return segments;
   }, [polygon, wallHeight, wallThickness, doorWidth, hasDoor, doorSide, doorSides, doorCount, doorPositions, center]);
 
-  // Load logo bệnh viện để gắn biển hiệu lên tường phòng
   const logoTexture = useLoader(THREE.TextureLoader, '/logo.png');
 
-  // Tìm đoạn tường đặc dài nhất để gắn biển hiệu logo Bệnh Viện Quân Y 7A
   const longestSolidSeg = useMemo(() => {
     let maxLen = 0;
     let bestSeg: typeof wallSegments[0] | null = null;
@@ -286,7 +269,7 @@ export function HospitalWallMesh({
           position={seg.center}
           rotation={[0, seg.rotationY, 0]}
         >
-          {/* Tường thạch cao y tế chuyên dụng: Đồng bộ 1 màu trắng ngọc thanh lịch, tối giản */}
+          {}
           <mesh castShadow receiveShadow>
             <boxGeometry args={seg.size} />
             <meshStandardMaterial
@@ -296,7 +279,7 @@ export function HospitalWallMesh({
             />
           </mesh>
 
-          {/* Viền nẹp chân tường nhôm xước y tế sang trọng (đồng bộ màu xám thanh nhã) */}
+          {}
           {!seg.isHeader && (
             <mesh position={[0, -seg.size[1] / 2 + 0.08, 0]}>
               <boxGeometry args={[seg.size[0], 0.16, seg.size[2] + 0.02]} />
@@ -308,7 +291,7 @@ export function HospitalWallMesh({
             </mesh>
           )}
 
-          {/* Phào chỉ viền đỉnh tường giúp phân tách hình khối kiến trúc */}
+          {}
           {!seg.isHeader && (
             <mesh position={[0, seg.size[1] / 2 - 0.04, 0]}>
               <boxGeometry args={[seg.size[0] + 0.02, 0.08, seg.size[2] + 0.02]} />
@@ -316,10 +299,10 @@ export function HospitalWallMesh({
             </mesh>
           )}
 
-          {/* ── CÁNH CỬA & KHUNG CỬA 3D THẬT DƯỚI DẦM CỬA ── */}
+          {}
           {seg.isHeader && (
             <group position={[0, -seg.size[1] / 2 - 1.05, 0]}>
-              {/* Khung bao cửa nhôm xingfa xám cao cấp */}
+              {}
               <mesh position={[-seg.size[0] / 2 + 0.04, 0, 0]}>
                 <boxGeometry args={[0.08, 2.1, seg.size[2] + 0.02]} />
                 <meshStandardMaterial color="#334155" roughness={0.3} metalness={0.6} />
@@ -333,9 +316,9 @@ export function HospitalWallMesh({
                 <meshStandardMaterial color="#334155" roughness={0.3} metalness={0.6} />
               </mesh>
 
-              {/* Cánh cửa phòng bệnh viện gỗ sồi sáng viền kính hé mở nhẹ (30 độ) tạo cảm giác đón tiếp */}
+              {}
               <group position={[-seg.size[0] / 2 + 0.08, 0, 0]} rotation={[0, 0.45, 0]}>
-                {/* Khung cánh cửa */}
+                {}
                 <mesh position={[(seg.size[0] - 0.16) / 2, 0, 0]}>
                   <boxGeometry args={[seg.size[0] - 0.16, 2.02, 0.05]} />
                   <meshStandardMaterial
@@ -344,7 +327,7 @@ export function HospitalWallMesh({
                     metalness={0.1}
                   />
                 </mesh>
-                {/* Ô kính quan sát y tế ở giữa cửa */}
+                {}
                 <mesh position={[(seg.size[0] - 0.16) / 2, 0.35, 0]}>
                   <boxGeometry args={[seg.size[0] * 0.45, 0.7, 0.06]} />
                   <meshStandardMaterial
@@ -355,7 +338,7 @@ export function HospitalWallMesh({
                     metalness={0.9}
                   />
                 </mesh>
-                {/* Tay nắm cửa gạt Inox 304 sang trọng */}
+                {}
                 <mesh position={[seg.size[0] - 0.3, -0.05, 0.04]} rotation={[0, 0, Math.PI / 2]}>
                   <cylinderGeometry args={[0.015, 0.015, 0.14]} />
                   <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.1} />
@@ -366,7 +349,7 @@ export function HospitalWallMesh({
         </group>
       ))}
 
-      {/* ── Biển hiệu Logo Bệnh Viện Quân Y 7A ốp trên mảng tường lớn ── */}
+      {}
       {longestSolidSeg && (
         <group
           position={[
@@ -376,17 +359,17 @@ export function HospitalWallMesh({
           ]}
           rotation={[0, longestSolidSeg.rotationY, 0]}
         >
-          {/* Khung biển hiệu màu trắng nổi bật */}
+          {}
           <mesh position={[0, 0, longestSolidSeg.size[2] / 2 + 0.02]}>
             <boxGeometry args={[1.5, 0.65, 0.03]} />
             <meshStandardMaterial color="#ffffff" roughness={0.2} metalness={0.1} />
           </mesh>
-          {/* Mặt logo in sắc nét có đèn nền hắt */}
+          {}
           <mesh position={[0, 0, longestSolidSeg.size[2] / 2 + 0.038]}>
             <planeGeometry args={[1.35, 0.52]} />
             <meshBasicMaterial map={logoTexture} transparent side={THREE.DoubleSide} />
           </mesh>
-          {/* Viền kim loại mạ crom sáng bóng quanh biển */}
+          {}
           <mesh position={[0, 0, longestSolidSeg.size[2] / 2 + 0.015]}>
             <boxGeometry args={[1.56, 0.71, 0.02]} />
             <meshStandardMaterial color="#38bdf8" roughness={0.1} metalness={0.9} />

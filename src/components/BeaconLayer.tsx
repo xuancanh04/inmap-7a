@@ -1,8 +1,3 @@
-// ============================================================================
-// InMap 7A — BeaconLayer.tsx
-// Hiển thị trực quan 3D các mốc phát sóng BLE Beacon (DFRobot Gravity) trên trần nhà
-// ============================================================================
-
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
@@ -39,7 +34,7 @@ export function BeaconLayer() {
               simulateNearestBeacon(beacon.minor);
             }}
           >
-            {/* Cột sóng tròn nhấp nháy phát tín hiệu */}
+            {}
             <mesh position={[0, -0.05, 0]}>
               <cylinderGeometry args={[0.25, 0.25, 0.1, 16]} />
               <meshStandardMaterial
@@ -49,7 +44,7 @@ export function BeaconLayer() {
               />
             </mesh>
 
-            {/* Vòng tròn sóng lan tỏa (Radio wave ring) */}
+            {}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]}>
               <ringGeometry args={[0.3, 0.45, 32]} />
               <meshBasicMaterial
@@ -59,13 +54,13 @@ export function BeaconLayer() {
               />
             </mesh>
 
-            {/* Đèn LED trung tâm chớp nháy */}
+            {}
             <mesh position={[0, -0.15, 0]}>
               <sphereGeometry args={[0.08, 16, 16]} />
               <meshBasicMaterial color={isActive ? '#22C55E' : '#38BDF8'} />
             </mesh>
 
-            {/* Nhãn 3D hiển thị thông tin Beacon */}
+            {}
             <Html
               position={[0, 0.4, 0]}
               center
@@ -84,15 +79,15 @@ export function BeaconLayer() {
                 <span>📡 {beacon.name.split('—')[0].trim()}</span>
               </div>
             </Html>
-            {/* Chấm vị trí người dùng (Blue Dot) trên sàn nhà khi đang ở trạm Beacon này */}
+            {}
             {isActive && (
               <group position={[0, -3.1, 0]}>
-                {/* Vòng xung kích nhấp nháy trên mặt sàn */}
+                {}
                 <mesh rotation={[-Math.PI / 2, 0, 0]}>
                   <ringGeometry args={[0.5, 0.75, 32]} />
                   <meshBasicMaterial color="#10b981" transparent opacity={0.6} side={2} />
                 </mesh>
-                {/* Chấm tròn định vị avatar */}
+                {}
                 <mesh position={[0, 0.2, 0]}>
                   <sphereGeometry args={[0.3, 16, 16]} />
                   <meshStandardMaterial color="#10b981" emissive="#10b981" emissiveIntensity={0.5} />
@@ -113,19 +108,12 @@ export function BeaconLayer() {
         );
       })}
 
-
-      {/* ── Chấm định vị Google Maps Blue Dot di chuyển tự do theo userPosition ── */}
+      {}
       <UserGoogleLocationMarker />
     </group>
   );
 }
 
-/**
- * Marker vị trí người dùng kiểu Google Maps:
- * - Chấm xanh viền trắng phát sáng
- * - Vòng xung nhịp radar (Pulsing halo)
- * - Nón ánh sáng la bàn (Compass field-of-view beam) chỉ về hướng nhìn ngoài đời
- */
 function UserGoogleLocationMarker() {
   const userPosition = useMapStore((s) => s.userPosition);
   const deviceHeading = useMapStore((s) => s.deviceHeading);
@@ -141,12 +129,11 @@ function UserGoogleLocationMarker() {
 
   if (!userPosition) return null;
 
-  // Góc xoay la bàn tính theo radian
   const headingRad = THREE.MathUtils.degToRad(deviceHeading ?? 0);
 
   return (
     <group position={[userPosition.x, 0.22, userPosition.z]}>
-      {/* 1. Nón ánh sáng La bàn chỉ hướng mặt (Compass Beam) */}
+      {}
       <group rotation={[-Math.PI / 2, 0, -headingRad]}>
         <mesh position={[0, 1.2, 0]}>
           <ringGeometry args={[0.2, 2.4, 24, 1, Math.PI * 0.3, Math.PI * 0.4]} />
@@ -159,25 +146,25 @@ function UserGoogleLocationMarker() {
         </mesh>
       </group>
 
-      {/* 2. Vòng radar phát sóng nhịp đập */}
+      {}
       <mesh ref={haloRef} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[1.2, 32]} />
         <meshBasicMaterial color="#3b82f6" transparent opacity={0.3} />
       </mesh>
 
-      {/* 3. Vòng viền trắng mạ kim loại */}
+      {}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <circleGeometry args={[0.55, 32]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
 
-      {/* 4. Chấm xanh Google Blue Dot cốt lõi */}
+      {}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
         <circleGeometry args={[0.42, 32]} />
         <meshBasicMaterial color="#1d4ed8" />
       </mesh>
 
-      {/* 5. Nhãn "Vị trí của bạn" */}
+      {}
       <Html position={[0, 0.9, 0]} center zIndexRange={[1, 50]} style={{ pointerEvents: 'none' }}>
         <div className="bg-blue-600 text-white font-bold text-[11px] px-2.5 py-0.5 rounded-full shadow-lg whitespace-nowrap border border-blue-300/60">
           📍 Vị trí của bạn
@@ -186,4 +173,3 @@ function UserGoogleLocationMarker() {
     </group>
   );
 }
-

@@ -1,8 +1,3 @@
-// ============================================================================
-// InMap 7A — MapCanvas.tsx
-// Canvas 3D chính: Camera, Controls, Ánh sáng, và lắp ráp các component 3D
-// ============================================================================
-
 import { Suspense, useMemo, useRef, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
@@ -16,12 +11,6 @@ import { MultiFloorBuilding } from './MultiFloorBuilding';
 import { BeaconLayer } from './BeaconLayer';
 import { useMapStore } from '../store/useMapStore';
 
-/**
- * Điều khiển Camera thông minh:
- * Khi có lộ trình dẫn đường (navigation.path):
- * - Tự động lướt mượt mà (smooth lerp) đưa góc nhìn vào trung tâm lộ trình
- * - Phóng to vừa vặn toàn bộ cung đường và phòng đích để bệnh nhân nhìn rõ lối đi
- */
 function NavigationCameraController({
   controlsRef,
   floorCenter,
@@ -31,8 +20,17 @@ function NavigationCameraController({
 }) {
   const path = useMapStore((s) => s.navigation.path);
   const navNodes = useMapStore((s) => s.navNodes);
+  const setCameraRotationAngle = useMapStore((s) => s.setCameraRotationAngle);
+  const resetNorthTrigger = useMapStore((s) => s.resetNorthTrigger);
+  const recenterUserTrigger = useMapStore((s) => s.recenterUserTrigger);
+  const zoomInTrigger = useMapStore((s) => s.zoomInTrigger);
+  const zoomOutTrigger = useMapStore((s) => s.zoomOutTrigger);
+  const lastNorthRef = useRef(resetNorthTrigger);
+  const lastRecenterRef = useRef(recenterUserTrigger);
+  const lastZoomInRef = useRef(zoomInTrigger);
+  const lastZoomOutRef = useRef(zoomOutTrigger);
 
-  // Tính góc hướng đi và vị trí camera chuẩn Google Maps (Đứng từ sau lưng người dùng nhìn thẳng về phía trước theo hướng đi)
+
   const navBounds = useMemo(() => {
     if (path.length < 2) return null;
     const nodeMap = new Map(navNodes.map((n) => [n.id, n]));
@@ -40,27 +38,22 @@ function NavigationCameraController({
     if (pts.length < 2 || !pts[0] || !pts[1]) return null;
 
     const start = pts[0].position;
-    // Lấy hướng của 1 hoặc 2 đoạn đầu tiên để biết người dùng cần bước tới đâu
+
     const next = pts[1].position;
     const dest = pts[pts.length - 1]!.position;
 
-    // Vector hướng đi ban đầu
     const dx = next.x - start.x;
     const dz = next.z - start.z;
     const dirLen = Math.hypot(dx, dz) || 1;
     const normDirX = dx / dirLen;
     const normDirZ = dz / dirLen;
 
-    // Tổng độ dài toàn cung đường
     let totalSpan = Math.hypot(dest.x - start.x, dest.z - start.z);
     totalSpan = Math.max(totalSpan, 12);
 
-    // Điểm ngắm (Look-at target): Ngắm vào phía trước người dùng khoảng 5-8 mét trên lộ trình
     const targetX = start.x + normDirX * Math.min(totalSpan * 0.45, 8);
     const targetZ = start.z + normDirZ * Math.min(totalSpan * 0.45, 8);
 
-    // Vị trí Camera kiểu Google Maps: Đứng lùi lại phía sau lưng người dùng và nâng cao lên góc 45 độ
-    // Camera ở vị trí (Start - Hướng đi * khoảng_cách_lùi)
     const camDistanceBehind = Math.min(totalSpan * 0.55, 14);
     const camHeight = Math.max(Math.min(totalSpan * 0.85, 22), 12);
 
@@ -86,55 +79,101 @@ function NavigationCameraController({
     }
   }, [navBounds, floorCenter]);
 
-  const isSimulatingWalk = useMapStore((s) => s.isSimulatingWalk);
   const userPosition = useMapStore((s) => s.userPosition);
   const deviceHeading = useMapStore((s) => s.deviceHeading);
+  const isFollowingUser = useMapStore((s) => s.isFollowingUser);
 
   useFrame(({ camera }) => {
     if (!controlsRef.current) return;
     const controls = controlsRef.current;
 
-    // Khi người dùng đang bước đi mô phỏng
-    if (isSimulatingWalk && userPosition) {
-      const headingRad = THREE.MathUtils.degToRad(deviceHeading ?? 0);
+    if (isFollowingUser && userPosition && path.length >= 2) {
+      let headingRad = THREE.MathUtils.degToRad(deviceHeading ?? 0);
+
+      const nodeMap = new Map(navNodes.map((n) => [n.id, n]));
+      const waypoints = path.map((id) => nodeMap.get(id)?.position).filter(Boolean);
+      let bestDist = Infinity;
+      let segIdx = 0;
+      for (let i = 0; i < waypoints.length - 1; i++) {
+        const p1 = waypoints[i]!;
+        const p2 = waypoints[i + 1]!;
+        const d = Math.hypot((p1.x + p2.x) / 2 - userPosition.x, (p1.z + p2.z) / 2 - userPosition.z);
+        if (d < bestDist) {
+          bestDist = d;
+          segIdx = i;
+        }
+      }
+      if (waypoints[segIdx] && waypoints[segIdx + 1]) {
+        const segDx = waypoints[segIdx + 1]!.x - waypoints[segIdx]!.x;
+        const segDz = waypoints[segIdx + 1]!.z - waypoints[segIdx]!.z;
+        if (Math.hypot(segDx, segDz) > 0.1) {
+          headingRad = Math.atan2(segDx, segDz);
+        }
+      }
+
       const forwardX = Math.sin(headingRad);
       const forwardZ = Math.cos(headingRad);
 
-      const targetPos = new THREE.Vector3(userPosition.x + forwardX * 4, 0, userPosition.z + forwardZ * 4);
-      controls.target.lerp(targetPos, 0.1);
+      const targetPos = new THREE.Vector3(
+        userPosition.x + forwardX * 3,
+        0,
+        userPosition.z + forwardZ * 3
+      );
+      controls.target.lerp(targetPos, 0.08);
 
       const desiredCamPos = new THREE.Vector3(
         userPosition.x - forwardX * 8,
         14,
         userPosition.z - forwardZ * 8
       );
-      camera.position.lerp(desiredCamPos, 0.08);
+      camera.position.lerp(desiredCamPos, 0.06);
     } else {
-      // Lướt mượt mà target của OrbitControls về phía trước mặt người dùng theo hướng đi
-      controls.target.lerp(targetLerp.current, 0.08);
 
-      // Khi vừa bấm tìm đường: Lướt camera về phía sau lưng người dùng nhìn tới phía trước
       if (isNavigating.current && navBounds) {
+        controls.target.lerp(targetLerp.current, 0.08);
         camera.position.lerp(navBounds.camPos, 0.07);
         if (camera.position.distanceTo(navBounds.camPos) < 0.25) {
-          isNavigating.current = false; // Đã xoay đúng góc nhìn phía trước mặt, nhường lại quyền tự do xoay zoom cho người dùng
+          isNavigating.current = false;
         }
       }
     }
 
+    if (resetNorthTrigger !== lastNorthRef.current) {
+      lastNorthRef.current = resetNorthTrigger;
+      const dist = camera.position.distanceTo(controls.target);
+      camera.position.set(controls.target.x, controls.target.y + dist * 0.7, controls.target.z + dist * 0.7);
+      camera.lookAt(controls.target);
+    }
+
+    if (recenterUserTrigger !== lastRecenterRef.current && userPosition) {
+      lastRecenterRef.current = recenterUserTrigger;
+      controls.target.set(userPosition.x, 0, userPosition.z);
+      camera.position.set(userPosition.x, 18, userPosition.z + 14);
+      controls.update();
+    }
+
+    if (zoomInTrigger !== lastZoomInRef.current) {
+      lastZoomInRef.current = zoomInTrigger;
+      camera.position.lerp(controls.target, 0.25);
+    }
+
+    if (zoomOutTrigger !== lastZoomOutRef.current) {
+      lastZoomOutRef.current = zoomOutTrigger;
+      const dir = camera.position.clone().sub(controls.target).normalize();
+      camera.position.addScaledVector(dir, 5);
+    }
+
+    // Calculate azimuth rotation (angle from north)
+    const offset = camera.position.clone().sub(controls.target);
+    const angleRad = Math.atan2(offset.x, offset.z);
+    setCameraRotationAngle(angleRad * (180 / Math.PI));
+
     controls.update();
   });
-
 
   return null;
 }
 
-/**
- * Component Canvas 3D chính.
- * - Camera perspective nhìn từ góc isometric.
- * - OrbitControls cho phép xoay 360°, zoom, kéo bản đồ mượt mà.
- * - Hệ thống ánh sáng: ambient + directional.
- */
 export function MapCanvas() {
   const currentFloor = useMapStore((s) => s.currentFloor);
   const floors = useMapStore((s) => s.floors);
@@ -149,7 +188,6 @@ export function MapCanvas() {
     [floors, currentFloor]
   );
 
-  // Tọa độ trung tâm sàn → target cho camera
   const floorCenter = useMemo(() => {
     if (!activeFloor) return [22, 0, 12] as [number, number, number];
     return [
@@ -162,7 +200,7 @@ export function MapCanvas() {
   return (
     <Canvas
       shadows
-      dpr={[1, 1.5]} // Giới hạn pixel ratio 1.5x để đảm bảo mượt mà 60fps trên mọi màn hình
+      dpr={[1, 1.5]}
       camera={{
         position: [floorCenter[0] + 30, 35, floorCenter[2] + 30],
         fov: 45,
@@ -181,7 +219,7 @@ export function MapCanvas() {
       }}
     >
       <Suspense fallback={null}>
-        {/* ── Hệ thống ánh sáng y tế cao cấp, ấm áp và rõ nét khối 3D ── */}
+        {}
         <ambientLight intensity={0.85} color="#ffffff" />
         <directionalLight
           position={[35, 50, 30]}
@@ -196,26 +234,26 @@ export function MapCanvas() {
           shadow-camera-top={45}
           shadow-camera-bottom={-45}
         />
-        {/* Ánh sáng phụ màu xanh ngọc nhẹ tạo cảm giác hiện đại */}
+        {}
         <directionalLight
           position={[-30, 30, -25]}
           intensity={0.5}
           color="#38bdf8"
         />
-        {/* Fill light từ dưới lên để các hốc phòng và cửa không bị tối đen */}
+        {}
         <directionalLight
           position={[0, -20, 0]}
           intensity={0.15}
           color="#94a3b8"
         />
 
-        {/* ── Fog tinh tế tạo chiều sâu vô cực ── */}
+        {}
         <fog attach="fog" args={['#080d1a', 70, 150]} />
 
-        {/* ── Môi trường thành phố đêm dịu mắt ── */}
+        {}
         <Environment preset="city" />
 
-        {/* ── Chế độ Toàn Cảnh Ghép 3 Tầng hoặc Xem Từng Tầng Đơn Lẻ ── */}
+        {}
         {building3DMode ? (
           <MultiFloorBuilding
             width={activeFloor?.width ?? 40}
@@ -223,7 +261,7 @@ export function MapCanvas() {
           />
         ) : (
           <>
-            {/* Mặt sàn đơn lẻ */}
+            {}
             {activeFloor && (
               <FloorPlan
                 width={activeFloor.width}
@@ -233,27 +271,27 @@ export function MapCanvas() {
                 floorId={currentFloor}
               />
             )}
-            {/* Các phòng của tầng hiện tại */}
+            {}
             <RoomManager wallHeight={2.8} />
           </>
         )}
 
-        {/* ── Room Builder 3D Overlay (Đỉnh, viền & khối preview 3D) ── */}
+        {}
         <RoomBuilderOverlay />
 
-        {/* ── Đường dẫn đường ── */}
+        {}
         <NavPath />
 
-        {/* ── Lớp hiển thị mốc sóng BLE Beacon (DFRobot Gravity) ── */}
+        {}
         <BeaconLayer />
 
-        {/* ── Bộ điều hướng Camera tự động lia mượt mà theo lộ trình tìm đường ── */}
+        {}
         <NavigationCameraController
           controlsRef={controlsRef}
           floorCenter={floorCenter}
         />
 
-        {/* ── Controls: Xoay 360° tự do, Zoom, Pan mượt mà trên cả Desktop & Cảm ứng Mobile ── */}
+        {}
         <OrbitControls
           ref={controlsRef}
           target={floorCenter}
@@ -261,8 +299,8 @@ export function MapCanvas() {
           dampingFactor={0.06}
           minDistance={5}
           maxDistance={120}
-          maxPolarAngle={Math.PI / 2.05} // Cho phép nhìn ngang mặt sàn nhưng không chìm dưới sàn
-          minPolarAngle={0.05}           // Cho phép nhìn từ đỉnh đầu (Top-down 90°)
+          maxPolarAngle={Math.PI / 2.05}
+          minPolarAngle={0.05}
           enableRotate={true}
           rotateSpeed={0.8}
           enableZoom={true}
@@ -270,8 +308,8 @@ export function MapCanvas() {
           enablePan={true}
           panSpeed={0.8}
           touches={{
-            ONE: 1, // TOUCH.ROTATE - 1 ngón xoay bản đồ 3D
-            TWO: 2, // TOUCH.DOLLY_PAN - 2 ngón zoom & kéo dịch chuyển bản đồ
+            ONE: 1,
+            TWO: 2,
           }}
         />
       </Suspense>
