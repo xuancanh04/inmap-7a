@@ -8,7 +8,6 @@ import { HospitalFurniture } from './HospitalFurniture';
 
 interface RoomModelProps {
   room: Room;
-
   wallHeight?: number;
 }
 
@@ -45,7 +44,7 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
   const labelPosition: [number, number, number] = useMemo(() => {
     const cx = room.center?.x ?? room.polygon[0]?.x ?? 0;
     const cz = room.center?.z ?? room.polygon[0]?.z ?? 0;
-    return [cx, wallHeight + 0.6, cz];
+    return [cx, wallHeight + 0.35, cz];
   }, [room.center, room.polygon, wallHeight]);
 
   const handleClick = useCallback(
@@ -77,7 +76,6 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
       onPointerOver={handlePointerOver}
       onPointerOut={handlePointerOut}
     >
-      {}
       <mesh
         geometry={floorGeometry}
         rotation={[-Math.PI / 2, 0, 0]}
@@ -85,7 +83,7 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
         receiveShadow
       >
         <meshStandardMaterial
-          color={isDestination ? '#10b981' : hovered ? '#e0f2fe' : '#f1f5f9'}
+          color={isDestination ? '#10b981' : hovered ? '#e0f2fe' : '#ffffff'}
           roughness={0.15}
           metalness={0.1}
           emissive={isDestination ? '#10b981' : hovered ? '#38bdf8' : '#000000'}
@@ -93,7 +91,6 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
         />
       </mesh>
 
-      {}
       {!room.noWall && (
         <HospitalWallMesh
           polygon={room.polygon}
@@ -111,30 +108,48 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
         />
       )}
 
-      {}
       <HospitalFurniture center={room.center} type={room.type || 'medical'} />
 
-      {}
+      {/* Nhãn tên phòng dạng huy hiệu thanh lịch chuẩn Apple Maps */}
       <Html
         position={labelPosition}
         center
-        distanceFactor={28}
+        distanceFactor={38}
         zIndexRange={[1, 50]}
         style={{ pointerEvents: 'none' }}
       >
         <div
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold select-none whitespace-nowrap shadow-2xl transition-all duration-200 border backdrop-blur-md ${
-            isDestination
-              ? 'bg-emerald-600 text-white border-emerald-300 ring-4 ring-emerald-400/40 shadow-emerald-500/40 scale-110'
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: isDestination ? '5px 12px' : hovered ? '4px 10px' : '3px 8px',
+            borderRadius: 20,
+            fontSize: isDestination ? 12 : 11,
+            fontWeight: 700,
+            letterSpacing: '-0.2px',
+            userSelect: 'none',
+            whiteSpace: 'nowrap',
+            backgroundColor: isDestination
+              ? '#16a34a'
               : hovered
-              ? 'bg-slate-900/95 text-white border-cyan-400 ring-2 ring-cyan-400/30 scale-105'
-              : 'bg-slate-900/85 text-slate-100 border-white/20'
-          }`}
+              ? '#0f172a'
+              : 'rgba(255, 255, 255, 0.94)',
+            color: isDestination ? '#ffffff' : hovered ? '#38bdf8' : '#1e293b',
+            border: isDestination
+              ? '2px solid #ffffff'
+              : hovered
+              ? '1.5px solid #38bdf8'
+              : '1px solid rgba(0, 0, 0, 0.12)',
+            boxShadow: isDestination
+              ? '0 6px 20px rgba(22, 163, 74, 0.55)'
+              : hovered
+              ? '0 6px 18px rgba(15, 23, 42, 0.35)'
+              : '0 2px 8px rgba(0, 0, 0, 0.1)',
+            transform: isDestination ? 'scale(1.15)' : hovered ? 'scale(1.06)' : 'scale(1)',
+            transition: 'all 0.18s ease-out',
+          }}
         >
-          <span
-            className="w-2 h-2 rounded-full animate-pulse"
-            style={{ backgroundColor: room.color || '#38bdf8' }}
-          />
           <span>{room.name}</span>
         </div>
       </Html>

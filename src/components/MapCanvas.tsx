@@ -1,6 +1,6 @@
 import { Suspense, useMemo, useRef, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
 import { FloorPlan } from './FloorPlan';
@@ -226,8 +226,8 @@ export function MapCanvas() {
           intensity={1.3}
           color="#ffffff"
           castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
           shadow-camera-far={140}
           shadow-camera-left={-45}
           shadow-camera-right={45}
@@ -251,7 +251,7 @@ export function MapCanvas() {
         <fog attach="fog" args={['#080d1a', 70, 150]} />
 
         {}
-        <Environment preset="city" />
+        
 
         {}
         {building3DMode ? (
