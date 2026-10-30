@@ -172,8 +172,8 @@ export function CoordHUD() {
                     return;
                   }
                   setBleStatusText('Đang quét Bluetooth...');
-                  const success = await startWebBleBeaconScanner((minor, rssi) => {
-                    setBleStatusText(`Bắt Beacon ${minor} (${rssi}dBm)`);
+                  const success = await startWebBleBeaconScanner((minor, rawRssi, smoothedRssi) => {
+                    setBleStatusText(`Bắt Beacon ${minor} (Gốc: ${rawRssi}dBm | Lọc: ${smoothedRssi}dBm)`);
                     simulateNearestBeacon(minor);
                   });
                   if (success) setBleScanning(true);

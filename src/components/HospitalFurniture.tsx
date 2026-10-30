@@ -139,7 +139,7 @@ export function HospitalFurniture({ center, type = 'medical' }: HospitalFurnitur
                 <boxGeometry args={[2.4, 2.6, 2.2]} />
                 <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.25} />
               </mesh>
-              {/* Cửa thang mặt Bắc (hướng về hành lang trên z=19.26) */}
+              {}
               <group position={[0, 0, -1.11]} rotation={[0, Math.PI, 0]}>
                 <mesh position={[0, 1.15, 0]}>
                   <boxGeometry args={[1.7, 2.3, 0.06]} />
@@ -162,7 +162,7 @@ export function HospitalFurniture({ center, type = 'medical' }: HospitalFurnitur
                   <meshBasicMaterial color="#22c55e" />
                 </mesh>
               </group>
-              {/* Cửa thang mặt Nam (hướng về hành lang dưới z=27.71) */}
+              {}
               <group position={[0, 0, 1.11]}>
                 <mesh position={[0, 1.15, 0]}>
                   <boxGeometry args={[1.7, 2.3, 0.06]} />

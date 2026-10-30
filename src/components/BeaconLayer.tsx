@@ -109,23 +109,46 @@ export function BeaconLayer() {
 function UserGoogleLocationMarker() {
   const userPosition = useMapStore((s) => s.userPosition);
   const deviceHeading = useMapStore((s) => s.deviceHeading);
+  const groupRef = useRef<THREE.Group>(null);
   const haloRef = useRef<THREE.Mesh>(null);
+  const headingGroupRef = useRef<THREE.Group>(null);
 
-  useFrame(({ clock }) => {
+  const currentPos = useRef(new THREE.Vector3(userPosition?.x ?? 0, 0.22, userPosition?.z ?? 0));
+  const currentHeading = useRef(deviceHeading ?? 0);
+
+  useFrame(({ clock }, delta) => {
     if (haloRef.current) {
       const scale = 1 + (Math.sin(clock.getElapsedTime() * 3) + 1) * 0.35;
       haloRef.current.scale.set(scale, scale, 1);
       (haloRef.current.material as THREE.MeshBasicMaterial).opacity = 0.5 - (scale - 1) * 0.5;
     }
+
+    if (groupRef.current && userPosition) {
+      const targetX = userPosition.x;
+      const targetZ = userPosition.z;
+
+      const lerpSpeed = 1.0 - Math.exp(-9.0 * delta);
+
+      currentPos.current.x = THREE.MathUtils.lerp(currentPos.current.x, targetX, lerpSpeed);
+      currentPos.current.z = THREE.MathUtils.lerp(currentPos.current.z, targetZ, lerpSpeed);
+      groupRef.current.position.set(currentPos.current.x, 0.22, currentPos.current.z);
+    }
+
+    if (headingGroupRef.current && deviceHeading !== null) {
+      const lerpSpeedHeading = 1.0 - Math.exp(-8.0 * delta);
+      let diff = (deviceHeading - currentHeading.current + 180) % 360 - 180;
+      if (diff < -180) diff += 360;
+      currentHeading.current += diff * lerpSpeedHeading;
+      const rad = THREE.MathUtils.degToRad(currentHeading.current);
+      headingGroupRef.current.rotation.set(-Math.PI / 2, 0, -rad);
+    }
   });
 
   if (!userPosition) return null;
 
-  const headingRad = THREE.MathUtils.degToRad(deviceHeading ?? 0);
-
   return (
-    <group position={[userPosition.x, 0.22, userPosition.z]}>
-      <group rotation={[-Math.PI / 2, 0, -headingRad]}>
+    <group ref={groupRef} position={[userPosition.x, 0.22, userPosition.z]}>
+      <group ref={headingGroupRef} rotation={[-Math.PI / 2, 0, -THREE.MathUtils.degToRad(deviceHeading ?? 0)]}>
         <mesh position={[0, 1.2, 0]}>
           <ringGeometry args={[0.2, 2.4, 24, 1, Math.PI * 0.3, Math.PI * 0.4]} />
           <meshBasicMaterial
