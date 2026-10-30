@@ -200,7 +200,6 @@ export function UIPanel() {
           : { maxHeight: 'min(86vh, 720px)' }),
       }}
     >
-      {}
       <div
         onClick={() => setIsMobileCollapsed((prev) => !prev)}
         style={styles.header}
@@ -229,7 +228,6 @@ export function UIPanel() {
         </div>
       </div>
 
-      {}
       <div
         style={{
           overflowY: 'auto',
@@ -241,7 +239,6 @@ export function UIPanel() {
           padding: '12px 16px 20px',
         }}
       >
-        {}
         <div style={styles.segmentedContainer}>
           {floors.map((floor) => {
             const active = currentFloor === floor.id;
@@ -260,11 +257,9 @@ export function UIPanel() {
           })}
         </div>
 
-        {}
         <div ref={routeCardRef} style={styles.routeCard}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {}
               <div style={{ position: 'relative' }}>
                 <div style={styles.routeRow}>
                   <div style={styles.pointIndicatorOrigin} />
@@ -305,7 +300,6 @@ export function UIPanel() {
                   )}
                 </div>
 
-                {}
                 {showOriginSuggestions && (
                   <div style={styles.suggestionsDropdown}>
                     <div
@@ -339,7 +333,6 @@ export function UIPanel() {
 
               <div style={styles.routeDivider} />
 
-              {}
               <div style={{ position: 'relative' }}>
                 <div style={styles.routeRow}>
                   <div style={styles.pointIndicatorDest} />
@@ -373,7 +366,6 @@ export function UIPanel() {
                   )}
                 </div>
 
-                {}
                 {showDestSuggestions && (
                   <div style={styles.suggestionsDropdown}>
                     {destSuggestions.length === 0 ? (
@@ -395,7 +387,6 @@ export function UIPanel() {
               </div>
             </div>
 
-            {}
             <button
               type="button"
               onClick={handleSwapRoute}
@@ -407,7 +398,6 @@ export function UIPanel() {
           </div>
         </div>
 
-        {}
         <div style={styles.roomListSection}>
           <div style={styles.sectionHeader}>
             <span style={styles.sectionTitle}>

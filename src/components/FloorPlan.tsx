@@ -63,7 +63,6 @@ export function FloorPlan({
 
   return (
     <group>
-      {/* Viền đế sàn ngoài */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[centerX, -0.06, centerZ]}
@@ -72,7 +71,6 @@ export function FloorPlan({
         <meshBasicMaterial color={floorBorderColor} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Mặt sàn chính màu trắng tinh tế */}
       <mesh
         ref={meshRef}
         rotation={[-Math.PI / 2, 0, 0]}
@@ -89,7 +87,6 @@ export function FloorPlan({
         />
       </mesh>
 
-      {/* Lưới tọa độ Grid màu xám nhạt nhẹ nhàng */}
       <Grid
         position={[centerX, -0.01, centerZ]}
         args={[width, depth]}
@@ -104,7 +101,6 @@ export function FloorPlan({
         infiniteGrid={false}
       />
 
-      {/* Điểm click trong Admin mode */}
       {adminMode && lastClick && (
         <group position={[lastClick.x, 0.2, lastClick.z]}>
           <mesh>

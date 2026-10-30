@@ -15,6 +15,7 @@ interface HospitalWallMeshProps {
   doorSides?: ('north' | 'south' | 'east' | 'west')[];
   doorCount?: number;
   doorPositions?: Point2D[];
+  showDoorFrame?: boolean;
   center?: { x: number; z: number };
 }
 
@@ -28,6 +29,7 @@ export function HospitalWallMesh({
   doorSides,
   doorCount = 1,
   doorPositions,
+  showDoorFrame = true,
   center,
 }: HospitalWallMeshProps) {
   const wallSegments = useMemo(() => {
@@ -38,6 +40,7 @@ export function HospitalWallMesh({
       size: [number, number, number];
       rotationY: number;
       isHeader?: boolean;
+      showFrame?: boolean;
     }> = [];
 
     const n = polygon.length;
@@ -126,7 +129,7 @@ export function HospitalWallMesh({
       const wallLen = Math.sqrt(dx * dx + dz * dz);
       const angle = Math.atan2(dz, dx);
 
-      const matchedDoorOffsets: number[] = [];
+      const matchedDoors: Array<{ offset: number; hasFrame: boolean }> = [];
       if (hasDoor && doorPositions && doorPositions.length > 0) {
         for (const dp of doorPositions) {
 
@@ -136,12 +139,12 @@ export function HospitalWallMesh({
           const perpDist = Math.abs((dp.x - p1.x) * -segDz + (dp.z - p1.z) * segDx);
 
           if (perpDist < 1.0 && proj >= 0 && proj <= wallLen) {
-            matchedDoorOffsets.push(proj);
+            matchedDoors.push({ offset: proj, hasFrame: dp.hasFrame !== false });
           }
         }
       }
 
-      const numDoors = matchedDoorOffsets.length > 0 ? matchedDoorOffsets.length : (doorEdgeMap.get(i) ?? 0);
+      const numDoors = matchedDoors.length > 0 ? matchedDoors.length : (doorEdgeMap.get(i) ?? 0);
 
       if (numDoors === 0 || wallLen < numDoors * doorWidth + 0.2) {
 
@@ -153,14 +156,15 @@ export function HospitalWallMesh({
           rotationY: -angle,
           isHeader: false,
         });
-      } else if (matchedDoorOffsets.length > 0) {
+      } else if (matchedDoors.length > 0) {
 
-        matchedDoorOffsets.sort((a, b) => a - b);
+        matchedDoors.sort((a, b) => a.offset - b.offset);
         const doorHeight = 2.1;
         const headerHeight = wallHeight - doorHeight;
 
         let curPos = 0;
-        for (const dOffset of matchedDoorOffsets) {
+        for (const dDoor of matchedDoors) {
+          const dOffset = dDoor.offset;
           const doorStart = Math.max(curPos, dOffset - doorWidth / 2);
           const doorEnd = Math.min(wallLen, doorStart + doorWidth);
           const actualDW = doorEnd - doorStart;
@@ -184,6 +188,7 @@ export function HospitalWallMesh({
             size: [actualDW, headerHeight, wallThickness],
             rotationY: -angle,
             isHeader: true,
+            showFrame: dDoor.hasFrame,
           });
 
           curPos = doorEnd;
@@ -229,6 +234,7 @@ export function HospitalWallMesh({
             size: [doorWidth, headerHeight, wallThickness],
             rotationY: -angle,
             isHeader: true,
+            showFrame: true,
           });
           currentDist += doorWidth;
         }
@@ -269,7 +275,6 @@ export function HospitalWallMesh({
           position={seg.center}
           rotation={[0, seg.rotationY, 0]}
         >
-          {}
           <mesh castShadow receiveShadow>
             <boxGeometry args={seg.size} />
             <meshStandardMaterial
@@ -279,7 +284,6 @@ export function HospitalWallMesh({
             />
           </mesh>
 
-          {}
           {!seg.isHeader && (
             <mesh position={[0, -seg.size[1] / 2 + 0.08, 0]}>
               <boxGeometry args={[seg.size[0], 0.16, seg.size[2] + 0.02]} />
@@ -291,7 +295,6 @@ export function HospitalWallMesh({
             </mesh>
           )}
 
-          {}
           {!seg.isHeader && (
             <mesh position={[0, seg.size[1] / 2 - 0.04, 0]}>
               <boxGeometry args={[seg.size[0] + 0.02, 0.08, seg.size[2] + 0.02]} />
@@ -299,10 +302,8 @@ export function HospitalWallMesh({
             </mesh>
           )}
 
-          {}
-          {seg.isHeader && (
+          {seg.isHeader && showDoorFrame && seg.showFrame !== false && (
             <group position={[0, -seg.size[1] / 2 - 1.05, 0]}>
-              {}
               <mesh position={[-seg.size[0] / 2 + 0.04, 0, 0]}>
                 <boxGeometry args={[0.08, 2.1, seg.size[2] + 0.02]} />
                 <meshStandardMaterial color="#334155" roughness={0.3} metalness={0.6} />
@@ -316,9 +317,7 @@ export function HospitalWallMesh({
                 <meshStandardMaterial color="#334155" roughness={0.3} metalness={0.6} />
               </mesh>
 
-              {}
               <group position={[-seg.size[0] / 2 + 0.08, 0, 0]} rotation={[0, 0.45, 0]}>
-                {}
                 <mesh position={[(seg.size[0] - 0.16) / 2, 0, 0]}>
                   <boxGeometry args={[seg.size[0] - 0.16, 2.02, 0.05]} />
                   <meshStandardMaterial
@@ -327,7 +326,6 @@ export function HospitalWallMesh({
                     metalness={0.1}
                   />
                 </mesh>
-                {}
                 <mesh position={[(seg.size[0] - 0.16) / 2, 0.35, 0]}>
                   <boxGeometry args={[seg.size[0] * 0.45, 0.7, 0.06]} />
                   <meshStandardMaterial
@@ -338,7 +336,6 @@ export function HospitalWallMesh({
                     metalness={0.9}
                   />
                 </mesh>
-                {}
                 <mesh position={[seg.size[0] - 0.3, -0.05, 0.04]} rotation={[0, 0, Math.PI / 2]}>
                   <cylinderGeometry args={[0.015, 0.015, 0.14]} />
                   <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.1} />
@@ -349,7 +346,6 @@ export function HospitalWallMesh({
         </group>
       ))}
 
-      {}
       {longestSolidSeg && (
         <group
           position={[
@@ -359,17 +355,14 @@ export function HospitalWallMesh({
           ]}
           rotation={[0, longestSolidSeg.rotationY, 0]}
         >
-          {}
           <mesh position={[0, 0, longestSolidSeg.size[2] / 2 + 0.02]}>
             <boxGeometry args={[1.5, 0.65, 0.03]} />
             <meshStandardMaterial color="#ffffff" roughness={0.2} metalness={0.1} />
           </mesh>
-          {}
           <mesh position={[0, 0, longestSolidSeg.size[2] / 2 + 0.038]}>
             <planeGeometry args={[1.35, 0.52]} />
             <meshBasicMaterial map={logoTexture} transparent side={THREE.DoubleSide} />
           </mesh>
-          {}
           <mesh position={[0, 0, longestSolidSeg.size[2] / 2 + 0.015]}>
             <boxGeometry args={[1.56, 0.71, 0.02]} />
             <meshStandardMaterial color="#38bdf8" roughness={0.1} metalness={0.9} />

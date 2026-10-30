@@ -34,7 +34,6 @@ export function BeaconLayer() {
               simulateNearestBeacon(beacon.minor);
             }}
           >
-            {}
             <mesh position={[0, -0.05, 0]}>
               <cylinderGeometry args={[0.25, 0.25, 0.1, 16]} />
               <meshStandardMaterial
@@ -44,7 +43,6 @@ export function BeaconLayer() {
               />
             </mesh>
 
-            {}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]}>
               <ringGeometry args={[0.3, 0.45, 32]} />
               <meshBasicMaterial
@@ -54,13 +52,11 @@ export function BeaconLayer() {
               />
             </mesh>
 
-            {}
             <mesh position={[0, -0.15, 0]}>
               <sphereGeometry args={[0.08, 16, 16]} />
               <meshBasicMaterial color={isActive ? '#22C55E' : '#38BDF8'} />
             </mesh>
 
-            {}
             <Html
               position={[0, 0.4, 0]}
               center
@@ -79,15 +75,12 @@ export function BeaconLayer() {
                 <span>📡 {beacon.name.split('—')[0].trim()}</span>
               </div>
             </Html>
-            {}
             {isActive && (
               <group position={[0, -3.1, 0]}>
-                {}
                 <mesh rotation={[-Math.PI / 2, 0, 0]}>
                   <ringGeometry args={[0.5, 0.75, 32]} />
                   <meshBasicMaterial color="#10b981" transparent opacity={0.6} side={2} />
                 </mesh>
-                {}
                 <mesh position={[0, 0.2, 0]}>
                   <sphereGeometry args={[0.3, 16, 16]} />
                   <meshStandardMaterial color="#10b981" emissive="#10b981" emissiveIntensity={0.5} />
@@ -108,7 +101,6 @@ export function BeaconLayer() {
         );
       })}
 
-      {}
       <UserGoogleLocationMarker />
     </group>
   );
@@ -133,7 +125,6 @@ function UserGoogleLocationMarker() {
 
   return (
     <group position={[userPosition.x, 0.22, userPosition.z]}>
-      {}
       <group rotation={[-Math.PI / 2, 0, -headingRad]}>
         <mesh position={[0, 1.2, 0]}>
           <ringGeometry args={[0.2, 2.4, 24, 1, Math.PI * 0.3, Math.PI * 0.4]} />
@@ -146,25 +137,21 @@ function UserGoogleLocationMarker() {
         </mesh>
       </group>
 
-      {}
       <mesh ref={haloRef} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[1.2, 32]} />
         <meshBasicMaterial color="#3b82f6" transparent opacity={0.3} />
       </mesh>
 
-      {}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <circleGeometry args={[0.55, 32]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
 
-      {}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
         <circleGeometry args={[0.42, 32]} />
         <meshBasicMaterial color="#1d4ed8" />
       </mesh>
 
-      {}
       <Html position={[0, 0.9, 0]} center zIndexRange={[1, 50]} style={{ pointerEvents: 'none' }}>
         <div className="bg-blue-600 text-white font-bold text-[11px] px-2.5 py-0.5 rounded-full shadow-lg whitespace-nowrap border border-blue-300/60">
           📍 Vị trí của bạn

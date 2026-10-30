@@ -143,8 +143,6 @@ function FloatingNavActions() {
         </div>
       </div>
 
-      {}
-
     </div>
   );
 }

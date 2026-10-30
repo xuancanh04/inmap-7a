@@ -143,7 +143,6 @@ export function NavPath() {
 
   return (
     <group name="navigation-path-layer">
-      {}
       <Line
         points={linePoints}
         color="#1d4ed8"
@@ -151,7 +150,6 @@ export function NavPath() {
         dashed={false}
       />
 
-      {}
       <Line
         points={linePoints}
         color="#3b82f6"
@@ -159,7 +157,6 @@ export function NavPath() {
         dashed={false}
       />
 
-      {}
       <group>
         {directionalArrows.map((arrow, idx) => (
           <group
@@ -167,7 +164,6 @@ export function NavPath() {
             position={arrow.pos}
             rotation={[0, arrow.rotY, 0]}
           >
-            {}
             <mesh
               rotation={[-Math.PI / 2, 0, Math.PI / 4]}
               position={[-0.08, 0, 0]}
@@ -175,7 +171,6 @@ export function NavPath() {
               <planeGeometry args={[0.07, 0.28]} />
               <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} />
             </mesh>
-            {}
             <mesh
               rotation={[-Math.PI / 2, 0, -Math.PI / 4]}
               position={[0.08, 0, 0]}
@@ -187,9 +182,7 @@ export function NavPath() {
         ))}
       </group>
 
-      {}
       <group position={[startPt.x, PATH_Y, startPt.z]}>
-        {}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
           <ringGeometry args={[0.3, 0.9, 32]} />
           <meshBasicMaterial
@@ -199,18 +192,15 @@ export function NavPath() {
             side={THREE.DoubleSide}
           />
         </mesh>
-        {}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
           <ringGeometry args={[0.22, 0.38, 32]} />
           <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} />
         </mesh>
-        {}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
           <circleGeometry args={[0.22, 32]} />
           <meshBasicMaterial color="#2563eb" side={THREE.DoubleSide} />
         </mesh>
 
-        {}
         <Html
           position={[0, 0.9, 0]}
           center
@@ -227,34 +217,27 @@ export function NavPath() {
         </Html>
       </group>
 
-      {}
       <group position={[endPt.x, PATH_Y, endPt.z]}>
-        {}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
           <circleGeometry args={[0.35, 32]} />
           <meshBasicMaterial color="#0f172a" transparent opacity={0.4} side={THREE.DoubleSide} />
         </mesh>
 
-        {}
         <group ref={destMarkerRef} position={[0, 0.8, 0]}>
-          {}
           <mesh position={[0, 0.3, 0]}>
             <sphereGeometry args={[0.42, 24, 24]} />
             <meshStandardMaterial color="#ea4335" roughness={0.2} metalness={0.1} />
           </mesh>
-          {}
           <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI]}>
             <coneGeometry args={[0.38, 0.6, 24]} />
             <meshStandardMaterial color="#ea4335" roughness={0.2} metalness={0.1} />
           </mesh>
-          {}
           <mesh position={[0, 0.3, 0.35]}>
             <circleGeometry args={[0.16, 24]} />
             <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} />
           </mesh>
         </group>
 
-        {}
         <Html
           position={[0, 1.85, 0]}
           center

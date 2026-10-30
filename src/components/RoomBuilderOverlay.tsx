@@ -39,7 +39,6 @@ export function RoomBuilderOverlay() {
 
   return (
     <group>
-      {}
       {builderPoints.map((p, idx) => (
         <group key={`bp-${idx}-${p.x}-${p.z}`} position={[p.x, 0.25, p.z]}>
           <mesh>
@@ -62,7 +61,6 @@ export function RoomBuilderOverlay() {
         </group>
       ))}
 
-      {}
       {linePoints.length >= 2 && (
         <Line
           points={linePoints}
@@ -72,7 +70,6 @@ export function RoomBuilderOverlay() {
         />
       )}
 
-      {}
       {previewGeometry && (
         <mesh
           geometry={previewGeometry}

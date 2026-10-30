@@ -45,7 +45,6 @@ export function CoordHUD() {
 
   return (
     <div style={styles.container}>
-      {}
       <div style={styles.header}>
         <div style={styles.headerLeft}>
           <span style={styles.pulse} />
@@ -54,7 +53,6 @@ export function CoordHUD() {
         <span style={styles.badge}>{clickedCoords.length}</span>
       </div>
 
-      {}
       <div style={styles.currentCoord}>
         {lastCoord ? (
           <>
@@ -76,7 +74,6 @@ export function CoordHUD() {
         )}
       </div>
 
-      {}
       {clickedCoords.length > 0 && (
         <div style={styles.historySection}>
           <div style={styles.historyHeader}>
@@ -122,12 +119,10 @@ export function CoordHUD() {
         </div>
       )}
 
-      {}
       <div style={styles.footer}>
         💡 Tọa độ tự động copy vào clipboard khi click
       </div>
 
-      {}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '12px 16px' }}>
         <div
           onClick={() => setShowBleSettings((v) => !v)}

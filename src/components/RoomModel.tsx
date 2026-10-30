@@ -80,14 +80,11 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
         geometry={floorGeometry}
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0.01, 0]}
-        receiveShadow
       >
-        <meshStandardMaterial
-          color={isDestination ? '#10b981' : hovered ? '#e0f2fe' : '#ffffff'}
-          roughness={0.15}
-          metalness={0.1}
-          emissive={isDestination ? '#10b981' : hovered ? '#38bdf8' : '#000000'}
-          emissiveIntensity={isDestination ? 0.3 : hovered ? 0.15 : 0}
+        <meshBasicMaterial
+          transparent
+          opacity={0}
+          depthWrite={false}
         />
       </mesh>
 
@@ -104,13 +101,13 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
           doorSides={room.doorSides}
           doorCount={room.doorCount}
           doorPositions={room.doorPositions}
+          showDoorFrame={room.showDoorFrame !== false}
           center={room.center}
         />
       )}
 
       <HospitalFurniture center={room.center} type={room.type || 'medical'} />
 
-      {/* Nhãn tên phòng dạng huy hiệu thanh lịch chuẩn Apple Maps */}
       <Html
         position={labelPosition}
         center
