@@ -41,6 +41,15 @@ export function AdminDashboard() {
 
   const [selectedUsbMinor, setSelectedUsbMinor] = useState<number>(1);
 
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
+  const [mobileView, setMobileView] = useState<'sidebar' | 'map'>('sidebar');
+
+  React.useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [discoveredBeacons, setDiscoveredBeacons] = useState<
     Map<number, { minor: number; rssi: number; lastSeen: number }>
   >(new Map());
@@ -107,57 +116,86 @@ export function AdminDashboard() {
 
   return (
     <div style={styles.shell}>
-      {}
-      <header style={styles.topNav}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={styles.logoBadge}>
-            <img src="/logo.png" alt="Logo" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+      <header style={{
+        ...styles.topNav,
+        padding: isMobile ? '0 12px' : '0 24px',
+        height: isMobile ? 54 : 60,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 14 }}>
+          <div style={{ ...styles.logoBadge, width: isMobile ? 30 : 36, height: isMobile ? 30 : 36 }}>
+            <img src="/logo.png" alt="Logo" style={{ width: isMobile ? 22 : 28, height: isMobile ? 22 : 28, objectFit: 'contain' }} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={styles.appName}>INMAP 7A</span>
-              <span style={styles.adminPill}>ADMIN PORTAL</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ ...styles.appName, fontSize: isMobile ? 14 : 16 }}>INMAP 7A</span>
+              <span style={styles.adminPill}>ADMIN</span>
             </div>
-            <div style={styles.hospitalText}>Bệnh Viện Quân Y 7A • Quản Trị Hạ Tầng BLE & Bản Đồ 3D</div>
+            {!isMobile && <div style={styles.hospitalText}>Bệnh Viện Quân Y 7A • Quản Trị Hạ Tầng BLE & Bản Đồ 3D</div>}
           </div>
         </div>
 
-        {}
-        <div style={styles.statusChips}>
-          <div style={styles.chipItem}>
-            <span style={{ color: '#60a5fa' }}>📡 Beacons:</span>
-            <strong>{beacons.length} mốc</strong>
+        {!isMobile ? (
+          <div style={styles.statusChips}>
+            <div style={styles.chipItem}>
+              <span style={{ color: '#60a5fa' }}>📡 Beacons:</span>
+              <strong>{beacons.length} mốc</strong>
+            </div>
+            <div style={styles.chipDivider} />
+            <div style={styles.chipItem}>
+              <span style={{ color: '#34d399' }}>🟢 Đang bắt:</span>
+              <strong>{activeBeaconMinor ? `Minor ${activeBeaconMinor}` : 'Chưa có'}</strong>
+            </div>
+            <div style={styles.chipDivider} />
+            <div style={styles.chipItem}>
+              <span style={{ color: '#f59e0b' }}>📍 Vị trí:</span>
+              <strong>{userPosition ? `X:${userPosition.x.toFixed(1)} Z:${userPosition.z.toFixed(1)}` : 'Đang đợi'}</strong>
+            </div>
           </div>
-          <div style={styles.chipDivider} />
-          <div style={styles.chipItem}>
-            <span style={{ color: '#34d399' }}>🟢 Đang bắt:</span>
-            <strong>{activeBeaconMinor ? `Minor ${activeBeaconMinor}` : 'Chưa có'}</strong>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              onClick={() => setMobileView(mobileView === 'sidebar' ? 'map' : 'sidebar')}
+              style={{
+                padding: '5px 10px',
+                borderRadius: 8,
+                background: mobileView === 'map' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.1)',
+                border: mobileView === 'map' ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.15)',
+                color: mobileView === 'map' ? '#38bdf8' : '#ffffff',
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              {mobileView === 'sidebar' ? '🗺 Xem Bản Đồ' : '⚙ Cấu Hình'}
+            </button>
           </div>
-          <div style={styles.chipDivider} />
-          <div style={styles.chipItem}>
-            <span style={{ color: '#f59e0b' }}>📍 Vị trí:</span>
-            <strong>{userPosition ? `X:${userPosition.x.toFixed(1)} Z:${userPosition.z.toFixed(1)}` : 'Đang đợi'}</strong>
-          </div>
-        </div>
+        )}
 
-        {}
         <button
           onClick={() => {
             window.location.pathname = '/';
           }}
-          style={styles.exitBtn}
+          style={{
+            ...styles.exitBtn,
+            padding: isMobile ? '6px 10px' : '8px 16px',
+            fontSize: isMobile ? 11 : 12,
+          }}
           title="Thoát khỏi trang quản trị về chế độ xem người dùng"
         >
           <span>✕</span>
-          <span>Thoát Admin</span>
+          {!isMobile && <span>Thoát Admin</span>}
         </button>
       </header>
 
-      {}
-      <div style={styles.mainLayout}>
-        {}
-        <aside style={styles.sidebar}>
-          {}
+      <div style={{
+        ...styles.mainLayout,
+        flexDirection: 'row',
+      }}>
+        <aside style={{
+          ...styles.sidebar,
+          width: isMobile ? '100%' : 440,
+          display: isMobile && mobileView !== 'sidebar' ? 'none' : 'flex',
+        }}>
           <div style={styles.floorTabs}>
             {floors.map((f) => (
               <button
@@ -173,7 +211,6 @@ export function AdminDashboard() {
             ))}
           </div>
 
-          {}
           <div style={styles.subTabs}>
             <button
               onClick={() => setActiveTab('beacons')}
@@ -204,12 +241,9 @@ export function AdminDashboard() {
             </button>
           </div>
 
-          {}
           <div style={styles.tabContent}>
-            {}
             {activeTab === 'beacons' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {}
                 <input
                   type="text"
                   placeholder="🔍 Tìm theo tên hoặc Minor ID..."
@@ -335,7 +369,6 @@ export function AdminDashboard() {
               </div>
             )}
 
-            {}
             {activeTab === 'add' && (
               <form onSubmit={handleAddBeacon} style={styles.addForm}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc', marginBottom: 4 }}>
@@ -412,7 +445,6 @@ export function AdminDashboard() {
                   </div>
                 </div>
 
-                {}
                 <div style={styles.formGroup}>
                   <label style={styles.formLabel}>Gợi Ý Tọa Độ Theo Phòng</label>
                   <select
@@ -443,7 +475,6 @@ export function AdminDashboard() {
               </form>
             )}
 
-            {}
             {activeTab === 'scanner' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>
@@ -549,7 +580,6 @@ export function AdminDashboard() {
                     {isBleScanning ? '⏹ Dừng Quét Bluetooth' : '⚡ Bắt Đầu Quét Tự Động (Auto-Discover)'}
                   </button>
 
-                  {}
                   {discoveredBeacons.size > 0 && (
                     <div style={{ marginTop: 12 }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', marginBottom: 6 }}>
@@ -607,8 +637,10 @@ export function AdminDashboard() {
           </div>
         </aside>
 
-        {}
-        <main style={styles.mapContainer}>
+        <main style={{
+          ...styles.mapContainer,
+          display: isMobile && mobileView !== 'map' ? 'none' : 'block',
+        }}>
           <MapCanvas />
         </main>
       </div>

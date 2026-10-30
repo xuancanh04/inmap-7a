@@ -536,8 +536,14 @@ export const SAMPLE_ROOMS: Room[] = [
     type: 'elevator',
 
     doorPositions: [
-      { x: 13.0, z: 19.26 },
-      { x: 13.0, z: 27.71 },
+      { x: 13.0, z: 19.26, hasFrame: true },
+      { x: 13.0, z: 27.71, hasFrame: true },
+      { x: 16.5, z: 19.26, hasFrame: false },
+      { x: 20.7, z: 19.26, hasFrame: false },
+      { x: 25.0, z: 19.26, hasFrame: false },
+      { x: 16.5, z: 27.71, hasFrame: false },
+      { x: 20.7, z: 27.71, hasFrame: false },
+      { x: 25.0, z: 27.71, hasFrame: false },
     ],
     description: 'Cầu thang bộ chính, cụm thang máy và sảnh thông tầng',
   },

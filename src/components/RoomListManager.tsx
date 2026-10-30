@@ -113,7 +113,6 @@ export function RoomListManager() {
 
   return (
     <div style={styles.container}>
-      {}
       <div style={styles.header}>
         <div style={styles.headerTitleRow}>
           <span style={styles.headerIcon}>🏢</span>
@@ -142,7 +141,6 @@ export function RoomListManager() {
 
       {!isCollapsed && (
         <>
-          {}
           <div style={styles.section}>
             <div style={styles.sectionHeader}>
               <span style={styles.sectionTitle}>1. Tạo khối phòng mới</span>
@@ -151,7 +149,6 @@ export function RoomListManager() {
               </span>
             </div>
 
-            {}
             <div style={styles.pointsStatus}>
               {builderPoints.length === 0 ? (
                 <div style={styles.pointsHint}>
@@ -182,7 +179,6 @@ export function RoomListManager() {
               )}
             </div>
 
-            {}
             <div style={styles.inputGroup}>
               <label style={styles.label}>Tên phòng:</label>
               <input
@@ -194,7 +190,6 @@ export function RoomListManager() {
               />
             </div>
 
-            {}
             <div style={styles.inputGroup}>
               <label style={styles.label}>Nhóm chức năng & Màu nhận diện:</label>
               <select
@@ -210,7 +205,6 @@ export function RoomListManager() {
               </select>
             </div>
 
-            {}
             <button
               onClick={handleCreateRoom}
               disabled={builderPoints.length < 3}
@@ -223,7 +217,6 @@ export function RoomListManager() {
             </button>
           </div>
 
-          {}
           <div style={styles.section}>
             <div style={styles.sectionHeader}>
               <span style={styles.sectionTitle}>
@@ -234,7 +227,6 @@ export function RoomListManager() {
               </button>
             </div>
 
-            {}
             <input
               type="text"
               placeholder="🔍 Tìm nhanh phòng..."
@@ -243,7 +235,6 @@ export function RoomListManager() {
               style={styles.searchBar}
             />
 
-            {}
             <div style={styles.roomList}>
               {filteredRooms.length === 0 ? (
                 <div style={styles.emptyText}>Chưa có phòng nào trên tầng {currentFloor}.</div>

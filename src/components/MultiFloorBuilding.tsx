@@ -47,7 +47,6 @@ export function MultiFloorBuilding({ width, depth }: MultiFloorBuildingProps) {
             key={`floor-group-${f.id}`}
             position={[0, f.yOffset, 0]}
           >
-            {}
             <FloorPlan
               width={width}
               depth={depth}
@@ -56,14 +55,12 @@ export function MultiFloorBuilding({ width, depth }: MultiFloorBuildingProps) {
               floorId={f.id}
             />
 
-            {}
             <group>
               {f.rooms.map((room) => (
                 <RoomModel key={room.id} room={room} wallHeight={2.8} />
               ))}
             </group>
 
-            {}
             <mesh
               position={[centerX, -0.15, centerZ]}
               rotation={[-Math.PI / 2, 0, 0]}
@@ -79,7 +76,6 @@ export function MultiFloorBuilding({ width, depth }: MultiFloorBuildingProps) {
               />
             </mesh>
 
-            {}
             <Html
               position={[-4, 2.5, centerZ]}
               center
@@ -106,7 +102,6 @@ export function MultiFloorBuilding({ width, depth }: MultiFloorBuildingProps) {
         );
       })}
 
-      {}
       {[
         [-0.5, -0.5],
         [width + 0.5, -0.5],

@@ -27,7 +27,6 @@ export function MapControlBar() {
         ...(isMobile ? styles.containerMobile : {}),
       }}
     >
-      {/* 1. NÚT LA BÀN GOOGLE MAPS */}
       <button
         type="button"
         onClick={triggerResetNorth}
@@ -46,7 +45,6 @@ export function MapControlBar() {
             height: 28,
           }}
         >
-          {/* Kim đỏ hướng Bắc */}
           <div
             style={{
               width: 0,
@@ -56,7 +54,6 @@ export function MapControlBar() {
               borderBottom: '11px solid #ef4444',
             }}
           />
-          {/* Kim xám hướng Nam */}
           <div
             style={{
               width: 0,
@@ -69,7 +66,6 @@ export function MapControlBar() {
         </div>
       </button>
 
-      {/* 2. NÚT TÂM ĐỊNH VỊ (TỰ ĐỘNG BÁM THEO VỊ TRÍ) */}
       <button
         type="button"
         onClick={() => {
@@ -88,7 +84,6 @@ export function MapControlBar() {
           boxShadow: isFollowingUser ? '0 0 0 2px rgba(59, 130, 246, 0.25)' : styles.iconBtn.boxShadow,
         }}
       >
-        {/* Biểu tượng tâm ngắm GPS chuẩn Google Maps */}
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="7" />
           <polyline points="12 2 12 5" />
@@ -99,7 +94,6 @@ export function MapControlBar() {
         </svg>
       </button>
 
-      {/* 3. CỤM NÚT PHÓNG TO / THU NHỎ (+ / -) */}
       <div style={styles.zoomGroup}>
         <button
           type="button"
@@ -205,4 +199,3 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
   },
 };
-

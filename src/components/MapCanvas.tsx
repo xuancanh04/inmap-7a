@@ -30,7 +30,6 @@ function NavigationCameraController({
   const lastZoomInRef = useRef(zoomInTrigger);
   const lastZoomOutRef = useRef(zoomOutTrigger);
 
-
   const navBounds = useMemo(() => {
     if (path.length < 2) return null;
     const nodeMap = new Map(navNodes.map((n) => [n.id, n]));
@@ -163,7 +162,6 @@ function NavigationCameraController({
       camera.position.addScaledVector(dir, 5);
     }
 
-    // Calculate azimuth rotation (angle from north)
     const offset = camera.position.clone().sub(controls.target);
     const angleRad = Math.atan2(offset.x, offset.z);
     setCameraRotationAngle(angleRad * (180 / Math.PI));
@@ -219,7 +217,6 @@ export function MapCanvas() {
       }}
     >
       <Suspense fallback={null}>
-        {}
         <ambientLight intensity={0.85} color="#ffffff" />
         <directionalLight
           position={[35, 50, 30]}
@@ -234,26 +231,19 @@ export function MapCanvas() {
           shadow-camera-top={45}
           shadow-camera-bottom={-45}
         />
-        {}
         <directionalLight
           position={[-30, 30, -25]}
           intensity={0.5}
           color="#38bdf8"
         />
-        {}
         <directionalLight
           position={[0, -20, 0]}
           intensity={0.15}
           color="#94a3b8"
         />
 
-        {}
         <fog attach="fog" args={['#080d1a', 70, 150]} />
 
-        {}
-        
-
-        {}
         {building3DMode ? (
           <MultiFloorBuilding
             width={activeFloor?.width ?? 40}
@@ -261,7 +251,6 @@ export function MapCanvas() {
           />
         ) : (
           <>
-            {}
             {activeFloor && (
               <FloorPlan
                 width={activeFloor.width}
@@ -271,27 +260,21 @@ export function MapCanvas() {
                 floorId={currentFloor}
               />
             )}
-            {}
             <RoomManager wallHeight={2.8} />
           </>
         )}
 
-        {}
         <RoomBuilderOverlay />
 
-        {}
         <NavPath />
 
-        {}
         <BeaconLayer />
 
-        {}
         <NavigationCameraController
           controlsRef={controlsRef}
           floorCenter={floorCenter}
         />
 
-        {}
         <OrbitControls
           ref={controlsRef}
           target={floorCenter}

@@ -1,6 +1,7 @@
 export interface Point2D {
   x: number;
   z: number;
+  hasFrame?: boolean;
 }
 
 export interface PolygonVertex {
@@ -32,6 +33,7 @@ export interface Room {
   doorCount?: number;
 
   doorPositions?: Point2D[];
+  showDoorFrame?: boolean;
 }
 
 export interface NavNode {
