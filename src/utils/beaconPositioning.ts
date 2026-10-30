@@ -1,5 +1,41 @@
 import type { Point2D, BeaconDevice, BleScanReading } from '../types';
 
+class RssiSmoother {
+  private smoothedRssiMap = new Map<number, number>();
+  private lastSeenMap = new Map<number, number>();
+  private readonly alpha: number;
+  private readonly ttlMs: number;
+
+  constructor(alpha: number = 0.28, ttlMs: number = 4000) {
+    this.alpha = alpha;
+    this.ttlMs = ttlMs;
+  }
+
+  public smooth(minor: number, rawRssi: number): number {
+    const now = Date.now();
+    const lastSeen = this.lastSeenMap.get(minor) ?? 0;
+    const prev = this.smoothedRssiMap.get(minor);
+
+    let smoothed: number;
+    if (prev === undefined || (now - lastSeen) > this.ttlMs) {
+      smoothed = rawRssi;
+    } else {
+      smoothed = this.alpha * rawRssi + (1 - this.alpha) * prev;
+    }
+
+    this.smoothedRssiMap.set(minor, smoothed);
+    this.lastSeenMap.set(minor, now);
+    return Math.round(smoothed * 10) / 10;
+  }
+
+  public clear(): void {
+    this.smoothedRssiMap.clear();
+    this.lastSeenMap.clear();
+  }
+}
+
+export const globalRssiSmoother = new RssiSmoother(0.28, 4000);
+
 export function calculateDistanceFromRssi(
   rssi: number,
   txPower: number = -59,
@@ -29,7 +65,6 @@ export function estimatePositionByTrilateration(
   beacons: BeaconDevice[]
 ): Point2D | null {
   if (readings.length < 3) {
-
     return estimatePositionByProximity(readings, beacons);
   }
 
@@ -55,7 +90,7 @@ export function estimatePositionByTrilateration(
 }
 
 export async function startWebBleBeaconScanner(
-  onBeaconDetected: (minor: number, rssi: number) => void
+  onBeaconDetected: (minor: number, rawRssi: number, smoothedRssi: number) => void
 ): Promise<boolean> {
   const nav = navigator as Navigator & {
     bluetooth?: {
@@ -85,9 +120,9 @@ export async function startWebBleBeaconScanner(
       if (!e.manufacturerData) return;
       const dataView = e.manufacturerData.get(0x004c);
       if (dataView && dataView.byteLength >= 23) {
-
         const minor = dataView.getUint16(20, false);
-        onBeaconDetected(minor, e.rssi);
+        const smoothed = globalRssiSmoother.smooth(minor, e.rssi);
+        onBeaconDetected(minor, e.rssi, smoothed);
       }
     });
 
@@ -158,7 +193,7 @@ export async function activateBeaconViaUsbRunInRam(
     onLog(`✅ Đã nạp RAM thành công cho Beacon Minor = ${minorId}! Thiết bị bắt đầu phát sóng.`);
     return true;
   } catch (err) {
-    onLog(`Lỗi: ${(err as Error).message || err}`);
+    onLog(`❌ Lỗi cấu hình Beacon: ${String(err)}`);
     return false;
   }
 }
