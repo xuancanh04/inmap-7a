@@ -210,7 +210,7 @@ export function UIPanel() {
         <div style={styles.headerContent}>
           <div style={styles.logoBadge}>
             <img
-              src="/logo.png"
+              src="/logo-bv7a.svg"
               alt="Logo Bệnh Viện Quân Y 7A"
               style={{ width: '100%', height: '100%', objectFit: 'contain' }}
             />
@@ -218,7 +218,6 @@ export function UIPanel() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <h1 style={styles.appTitle}>InMap 7A</h1>
-              <span style={styles.statusBadge}>Trực Tuyến</span>
             </div>
             <p style={styles.hospitalName}>Bệnh Viện Quân Y 7A</p>
           </div>

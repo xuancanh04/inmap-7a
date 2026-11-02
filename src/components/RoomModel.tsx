@@ -13,7 +13,6 @@ interface RoomModelProps {
 
 export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
   const [hovered, setHovered] = useState(false);
-  const navigateToRoom = useMapStore((s) => s.navigateToRoom);
   const destinationNodeId = useMapStore((s) => s.navigation.destinationNodeId);
   const navNodes = useMapStore((s) => s.navNodes);
 
@@ -47,12 +46,14 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
     return [cx, wallHeight + 0.35, cz];
   }, [room.center, room.polygon, wallHeight]);
 
+  const setSelectedRoomId = useMapStore((s) => s.setSelectedRoomId);
+
   const handleClick = useCallback(
     (e: { stopPropagation: () => void }) => {
       e.stopPropagation();
-      navigateToRoom(room.id);
+      setSelectedRoomId(room.id);
     },
-    [navigateToRoom, room.id]
+    [setSelectedRoomId, room.id]
   );
 
   const handlePointerOver = useCallback(

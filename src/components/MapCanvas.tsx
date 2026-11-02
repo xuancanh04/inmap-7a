@@ -38,26 +38,30 @@ function NavigationCameraController({
 
     const start = pts[0].position;
 
-    const next = pts[1].position;
+    
     const dest = pts[pts.length - 1]!.position;
 
-    const dx = next.x - start.x;
-    const dz = next.z - start.z;
-    const dirLen = Math.hypot(dx, dz) || 1;
-    const normDirX = dx / dirLen;
-    const normDirZ = dz / dirLen;
+    // Đường đi hợp lệ từ start đến dest
 
-    let totalSpan = Math.hypot(dest.x - start.x, dest.z - start.z);
-    totalSpan = Math.max(totalSpan, 12);
+    // Tâm đường đi thực tế giữa điểm đầu và điểm cuối
+    const midX = (start.x + dest.x) / 2;
+    const midZ = (start.z + dest.z) / 2;
 
-    const targetX = start.x + normDirX * Math.min(totalSpan * 0.45, 8);
-    const targetZ = start.z + normDirZ * Math.min(totalSpan * 0.45, 8);
+    const spanX = Math.abs(dest.x - start.x);
+    const spanZ = Math.abs(dest.z - start.z);
+    const maxSpan = Math.max(spanX, spanZ, 16);
 
-    const camDistanceBehind = Math.min(totalSpan * 0.55, 14);
-    const camHeight = Math.max(Math.min(totalSpan * 0.85, 22), 12);
+    // Tính toán khoảng cách camera vừa vặn cho màn hình điện thoại
+    const isMobileScreen = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const heightFactor = isMobileScreen ? 1.6 : 1.25;
+    const camHeight = Math.max(maxSpan * heightFactor, 26);
+    const camDistZ = isMobileScreen ? camHeight * 0.75 : camHeight * 0.65;
 
-    const camX = start.x - normDirX * camDistanceBehind;
-    const camZ = start.z - normDirZ * camDistanceBehind;
+    const camX = midX;
+    const camZ = midZ + camDistZ;
+
+    const targetX = midX;
+    const targetZ = midZ;
 
     return {
       center: new THREE.Vector3(targetX, 0, targetZ),
@@ -86,27 +90,40 @@ function NavigationCameraController({
     if (!controlsRef.current) return;
     const controls = controlsRef.current;
 
-    if (isFollowingUser && userPosition && path.length >= 2) {
-      let headingRad = THREE.MathUtils.degToRad(deviceHeading ?? 0);
+    
 
+    // Lấy tâm quay: nếu có vị trí người dùng thì theo userPosition, nếu chưa có thì lấy điểm đầu đường đi
+    const focusCenter = userPosition ?? (path.length >= 2 ? (() => {
       const nodeMap = new Map(navNodes.map((n) => [n.id, n]));
-      const waypoints = path.map((id) => nodeMap.get(id)?.position).filter(Boolean);
-      let bestDist = Infinity;
-      let segIdx = 0;
-      for (let i = 0; i < waypoints.length - 1; i++) {
-        const p1 = waypoints[i]!;
-        const p2 = waypoints[i + 1]!;
-        const d = Math.hypot((p1.x + p2.x) / 2 - userPosition.x, (p1.z + p2.z) / 2 - userPosition.z);
-        if (d < bestDist) {
-          bestDist = d;
-          segIdx = i;
+      return nodeMap.get(path[0])?.position ?? null;
+    })() : null);
+
+    // Luôn tự động xoay camera theo hướng quay điện thoại khi có đường đi hoặc khi đang theo dõi người dùng
+    if ((isFollowingUser || path.length >= 2) && focusCenter) {
+      // Ưu tiên góc la bàn quay điện thoại thực tế (deviceHeading) nếu có
+      let headingRad = deviceHeading !== null ? THREE.MathUtils.degToRad(deviceHeading) : 0;
+
+      // Nếu không có cảm biến la bàn, fallback theo hướng của đoạn đường đi
+      if (deviceHeading === null) {
+        const nodeMap = new Map(navNodes.map((n) => [n.id, n]));
+        const waypoints = path.map((id) => nodeMap.get(id)?.position).filter(Boolean);
+        let bestDist = Infinity;
+        let segIdx = 0;
+        for (let i = 0; i < waypoints.length - 1; i++) {
+          const p1 = waypoints[i]!;
+          const p2 = waypoints[i + 1]!;
+          const d = Math.hypot((p1.x + p2.x) / 2 - focusCenter.x, (p1.z + p2.z) / 2 - focusCenter.z);
+          if (d < bestDist) {
+            bestDist = d;
+            segIdx = i;
+          }
         }
-      }
-      if (waypoints[segIdx] && waypoints[segIdx + 1]) {
-        const segDx = waypoints[segIdx + 1]!.x - waypoints[segIdx]!.x;
-        const segDz = waypoints[segIdx + 1]!.z - waypoints[segIdx]!.z;
-        if (Math.hypot(segDx, segDz) > 0.1) {
-          headingRad = Math.atan2(segDx, segDz);
+        if (waypoints[segIdx] && waypoints[segIdx + 1]) {
+          const segDx = waypoints[segIdx + 1]!.x - waypoints[segIdx]!.x;
+          const segDz = waypoints[segIdx + 1]!.z - waypoints[segIdx]!.z;
+          if (Math.hypot(segDx, segDz) > 0.1) {
+            headingRad = Math.atan2(segDx, segDz);
+          }
         }
       }
 
@@ -114,16 +131,16 @@ function NavigationCameraController({
       const forwardZ = Math.cos(headingRad);
 
       const targetPos = new THREE.Vector3(
-        userPosition.x + forwardX * 3,
+        focusCenter.x + forwardX * 3,
         0,
-        userPosition.z + forwardZ * 3
+        focusCenter.z + forwardZ * 3
       );
       controls.target.lerp(targetPos, 0.08);
 
       const desiredCamPos = new THREE.Vector3(
-        userPosition.x - forwardX * 8,
+        focusCenter.x - forwardX * 8,
         14,
-        userPosition.z - forwardZ * 8
+        focusCenter.z - forwardZ * 8
       );
       camera.position.lerp(desiredCamPos, 0.06);
     } else {
@@ -195,8 +212,15 @@ export function MapCanvas() {
     ] as [number, number, number];
   }, [activeFloor]);
 
+  const setIsFollowingUser = useMapStore((s) => s.setIsFollowingUser);
+
   return (
     <Canvas
+      onPointerDown={() => {
+        if (useMapStore.getState().isFollowingUser) {
+          setIsFollowingUser(false);
+        }
+      }}
       shadows
       dpr={[1, 1.5]}
       camera={{
@@ -279,20 +303,20 @@ export function MapCanvas() {
           ref={controlsRef}
           target={floorCenter}
           enableDamping
-          dampingFactor={0.06}
+          dampingFactor={0.08}
           minDistance={5}
           maxDistance={120}
           maxPolarAngle={Math.PI / 2.05}
           minPolarAngle={0.05}
           enableRotate={true}
-          rotateSpeed={0.8}
+          rotateSpeed={1.0}
           enableZoom={true}
-          zoomSpeed={1.0}
+          zoomSpeed={1.2}
           enablePan={true}
-          panSpeed={0.8}
+          panSpeed={0.9}
           touches={{
-            ONE: 1,
-            TWO: 2,
+            ONE: THREE.TOUCH.ROTATE,
+            TWO: THREE.TOUCH.DOLLY_PAN,
           }}
         />
       </Suspense>
