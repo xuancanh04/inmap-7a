@@ -20,9 +20,15 @@ export interface MapStoreState {
   userPosition: Point2D | null;
   deviceHeading: number | null;
   isSimulatingWalk: boolean;
+  isNavigatingActive: boolean;
+  setIsNavigatingActive: (active: boolean) => void;
+  selectedRoomId: string | null;
+  setSelectedRoomId: (roomId: string | null) => void;
 
   navigation: NavigationState;
   isFollowingUser: boolean;
+  isCompassTracking: boolean;
+  setIsCompassTracking: (active: boolean) => void;
   cameraRotationAngle: number;
   setCameraRotationAngle: (angle: number) => void;
   resetNorthTrigger: number;
@@ -89,12 +95,18 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
   userPosition: null,
   deviceHeading: null,
   isSimulatingWalk: false,
+  isNavigatingActive: false,
+  setIsNavigatingActive: (active) => set({ isNavigatingActive: active }),
+  selectedRoomId: null,
+  setSelectedRoomId: (roomId) => set({ selectedRoomId: roomId }),
   navigation: {
     originNodeId: null,
     destinationNodeId: null,
     path: [],
   },
   isFollowingUser: false,
+  isCompassTracking: true,
+  setIsCompassTracking: (active) => set({ isCompassTracking: active }),
   cameraRotationAngle: 0,
   setCameraRotationAngle: (angle) => set({ cameraRotationAngle: angle }),
   resetNorthTrigger: 0,
@@ -259,6 +271,10 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
         path: [],
       },
       isFollowingUser: false,
+      isNavigatingActive: false,
+      isSimulatingWalk: false,
+  isCompassTracking: true,
+  setIsCompassTracking: (active) => set({ isCompassTracking: active }),
   cameraRotationAngle: 0,
   setCameraRotationAngle: (angle) => set({ cameraRotationAngle: angle }),
   resetNorthTrigger: 0,
@@ -274,38 +290,64 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
   setIsFollowingUser: (following) => set({ isFollowingUser: following }),
 
   navigateToRoom: (roomId) => {
-    const { navNodes, currentFloor, userPosition } = get();
+    const { navNodes, currentFloor, userPosition, rooms } = get();
     const floorNodes = navNodes.filter((n) => n.floor === currentFloor);
 
-    const destNode = floorNodes.find((n) => n.roomId === roomId);
+    // 1. Tìm destNode trực tiếp từ roomId
+    let destNode = floorNodes.find((n) => n.roomId === roomId);
+
+    // 2. Nếu phòng chưa có node trực tiếp (ví dụ WC, thang máy, phòng chuyên khoa phụ), tìm node gần center phòng nhất
+    if (!destNode) {
+      const targetRoom = rooms.find((r) => r.id === roomId);
+      if (targetRoom) {
+        const rCenter = targetRoom.center;
+        let minD = Infinity;
+        for (const n of floorNodes) {
+          const d = Math.hypot(n.position.x - rCenter.x, n.position.z - rCenter.z);
+          if (d < minD) {
+            minD = d;
+            destNode = n;
+          }
+        }
+      }
+    }
+
     if (!destNode) return;
 
+    // 3. Tìm originNode (vị trí xuất phát)
     let originNode: NavNode | null = null;
     if (userPosition) {
       let minDist = Infinity;
       for (const node of floorNodes) {
-        const dx = node.position.x - userPosition.x;
-        const dz = node.position.z - userPosition.z;
-        const dist = dx * dx + dz * dz;
+        const dist = Math.hypot(node.position.x - userPosition.x, node.position.z - userPosition.z);
         if (dist < minDist) {
           minDist = dist;
           originNode = node;
         }
       }
-    } else {
+    }
 
-      originNode = floorNodes[0] ?? null;
+    // Nếu chưa có userPosition hoặc userPosition trùng với destNode, lấy 1 node khác làm điểm đi
+    if (!originNode || originNode.id === destNode.id) {
+      // Ưu tiên n-truc-ban-1 hoặc node khác destNode
+      originNode = floorNodes.find((n) => n.id !== destNode!.id) ?? floorNodes[0] ?? null;
     }
 
     if (!originNode) return;
+
+    // Nếu người dùng chưa có vị trí thực tế, tự động đặt userPosition tại originNode để thấy chấm xanh
+    if (!userPosition) {
+      set({ userPosition: originNode.position });
+    }
 
     set((state) => ({
       navigation: {
         ...state.navigation,
         originNodeId: originNode!.id,
-        destinationNodeId: destNode.id,
+        destinationNodeId: destNode!.id,
         path: [],
       },
+      selectedRoomId: roomId,
     }));
 
     get().calculatePath();

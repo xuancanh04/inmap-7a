@@ -127,3 +127,16 @@ button, select, input {
   }
 }
 
+
+/* Đảm bảo các nhãn phòng/HTML 3D không chặn thao tác vuốt xoay bản đồ trên màn hình cảm ứng */
+.annotation-container,
+div[style*='pointer-events: none'] {
+  touch-action: none;
+}
+
+/* Chống iOS/Android tự động zoom web khi chạm vào ô tìm kiếm/nhập đường đi */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}

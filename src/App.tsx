@@ -1,16 +1,16 @@
 import { useEffect, useState, useMemo } from 'react';
 import { MapCanvas } from './components/MapCanvas';
-import { UIPanel } from './components/UIPanel';
 import { CoordHUD } from './components/CoordHUD';
 import { RoomListManager } from './components/RoomListManager';
 import { AdminDashboard } from './components/AdminDashboard';
 import { MapControlBar } from './components/MapControlBar';
+import { GoogleMapsSearchBar } from './components/GoogleMapsSearchBar';
+import { GoogleMapsBottomCard } from './components/GoogleMapsBottomCard';
 import { useMapStore } from './store/useMapStore';
+import { startCompassListener } from './utils/compassService';
 import {
   SAMPLE_FLOORS,
   SAMPLE_ROOMS,
-  GROUND_FLOOR_ROOMS,
-  FLOOR_2_ROOMS,
   SAMPLE_NAV_NODES,
   SAMPLE_NAV_EDGES,
 } from './data/sampleData';
@@ -23,14 +23,25 @@ function App() {
   const toggleAdminMode = useMapStore((s) => s.toggleAdminMode);
   const toggleBuilderMode = useMapStore((s) => s.toggleBuilderMode);
 
+  const setDeviceHeading = useMapStore((s) => s.setDeviceHeading);
+
   useEffect(() => {
-    useMapStore.setState({ floors: SAMPLE_FLOORS });
-    setRooms([...GROUND_FLOOR_ROOMS, ...SAMPLE_ROOMS, ...FLOOR_2_ROOMS]);
+    useMapStore.setState({ floors: SAMPLE_FLOORS.filter(f => f.id === 1), currentFloor: 1 });
+    setRooms(SAMPLE_ROOMS); // Chỉ lấy danh sách phòng ở Lầu 1
     setNavData(SAMPLE_NAV_NODES, SAMPLE_NAV_EDGES);
 
     setBeacons([]);
-    setUserPosition({ x: 20, z: 24 });
-  }, [setRooms, setNavData, setBeacons, setUserPosition]);
+    // Không cố định vị trí ở thang máy nữa - để null chờ nhận vị trí từ Beacon/Người dùng chọn
+    setUserPosition(null);
+
+    const stopCompass = startCompassListener((heading) => {
+      setDeviceHeading(heading);
+    });
+
+    return () => {
+      stopCompass();
+    };
+  }, [setRooms, setNavData, setBeacons, setUserPosition, setDeviceHeading]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -73,8 +84,13 @@ function App() {
     <div style={styles.appContainer}>
       <MapCanvas />
 
-      <UIPanel />
+      {/* Thanh tìm kiếm trên đỉnh chuẩn Google Maps */}
+      <GoogleMapsSearchBar />
 
+      {/* Thẻ thông tin phòng phía dưới chuẩn Google Maps với nút Đường đi & Bắt đầu */}
+      <GoogleMapsBottomCard />
+
+      
       <CoordHUD />
 
       <RoomListManager />
@@ -89,61 +105,261 @@ function App() {
 function FloatingNavActions() {
   const path = useMapStore((s) => s.navigation.path);
   const navNodes = useMapStore((s) => s.navNodes);
+  const rooms = useMapStore((s) => s.rooms);
   const userPosition = useMapStore((s) => s.userPosition);
-  const isFollowingUser = useMapStore((s) => s.isFollowingUser);
+  const clearNavigation = useMapStore((s) => s.clearNavigation);
+  const isNavigatingActive = useMapStore((s) => s.isNavigatingActive);
 
-  const remainingMeters = useMemo(() => {
-    if (path.length < 2 || !userPosition) return 0;
+  const navInfo = useMemo(() => {
+    // Chỉ hiển thị thanh xanh hướng dẫn Turn-by-Turn khi bấm "Bắt đầu" (isNavigatingActive)
+    if (!isNavigatingActive || path.length < 2) return null;
     const nodeMap = new Map(navNodes.map((n) => [n.id, n]));
     const destNode = nodeMap.get(path[path.length - 1]);
-    if (!destNode) return 0;
-    const dist = Math.hypot(destNode.position.x - userPosition.x, destNode.position.z - userPosition.z);
-    return Math.round(dist * 1.2);
-  }, [path, navNodes, userPosition]);
+    const startNode = nodeMap.get(path[0]);
+    if (!destNode) return null;
 
-  if (path.length < 2) return null;
+    const fromPos = userPosition ?? startNode?.position;
+    const dist = fromPos
+      ? Math.hypot(destNode.position.x - fromPos.x, destNode.position.z - fromPos.z)
+      : 15;
+    const meters = Math.max(2, Math.round(dist * 1.2));
+    const destRoom = rooms.find((r) => r.id === destNode.roomId);
+    const destName = destRoom?.name ?? destNode.label ?? 'Điểm đến';
+
+    // Xác định hướng rẽ của đoạn kế tiếp (rẽ trái / rẽ phải / đi thẳng / đích đến)
+    let actionType: 'straight' | 'right' | 'left' | 'arrive' = 'straight';
+    let actionText = 'Đi thẳng dọc hành lang';
+    if (path.length >= 3) {
+      const p1 = nodeMap.get(path[0])?.position;
+      const p2 = nodeMap.get(path[1])?.position;
+      const p3 = nodeMap.get(path[2])?.position;
+      if (p1 && p2 && p3) {
+        const v1x = p2.x - p1.x;
+        const v1z = p2.z - p1.z;
+        const v2x = p3.x - p2.x;
+        const v2z = p3.z - p2.z;
+        const cross = v1x * v2z - v1z * v2x;
+        if (cross > 0.8) {
+          actionType = 'right';
+          actionText = 'Rẽ phải ở ngã rẽ tiếp theo';
+        } else if (cross < -0.8) {
+          actionType = 'left';
+          actionText = 'Rẽ trái ở ngã rẽ tiếp theo';
+        }
+      }
+    }
+
+    if (meters <= 3) {
+      actionType = 'arrive';
+      actionText = 'Bạn đã tới trước cửa phòng!';
+    }
+
+    // Tìm phân đoạn trên đường đi gần vị trí người dùng nhất để tính chính xác quãng đường còn lại
+    let remainingMeters = 0;
+    if (fromPos && path.length >= 2) {
+      // 1. Tìm node tiếp theo mà user đang hướng tới
+      let closestIdx = 0;
+      let minD = Infinity;
+      for (let i = 0; i < path.length; i++) {
+        const p = nodeMap.get(path[i])?.position;
+        if (p) {
+          const d = Math.hypot(p.x - fromPos.x, p.z - fromPos.z);
+          if (d < minD) {
+            minD = d;
+            closestIdx = i;
+          }
+        }
+      }
+
+      // Khoảng cách từ người dùng tới node gần nhất phía trước
+      const targetNextIdx = Math.min(path.length - 1, closestIdx + 1);
+      const nextPos = nodeMap.get(path[targetNextIdx])?.position;
+      const dToNext = nextPos ? Math.hypot(nextPos.x - fromPos.x, nextPos.z - fromPos.z) : 0;
+      remainingMeters += dToNext * 1.2;
+
+      // Cộng dồn các đoạn còn lại từ node tiếp theo tới đích
+      for (let i = targetNextIdx; i < path.length - 1; i++) {
+        const na = nodeMap.get(path[i]);
+        const nb = nodeMap.get(path[i + 1]);
+        if (na && nb) {
+          remainingMeters += Math.hypot(nb.position.x - na.position.x, nb.position.z - na.position.z) * 1.2;
+        }
+      }
+    }
+
+    const totalMeters = Math.max(2, Math.round(remainingMeters > 0 ? remainingMeters : meters));
+    const totalMinutes = Math.max(1, Math.ceil(totalMeters / 45)); // Đi bộ bình quân ~45m/phút
+
+    // Ước tính giờ đến dự kiến (ETA)
+    const now = new Date();
+    const etaDate = new Date(now.getTime() + totalMinutes * 60000);
+    const etaString = `${etaDate.getHours().toString().padStart(2, '0')}:${etaDate.getMinutes().toString().padStart(2, '0')}`;
+
+    return {
+      meters,
+      totalMeters,
+      totalMinutes,
+      etaString,
+      destName,
+      actionType,
+      actionText,
+    };
+  }, [isNavigatingActive, path, navNodes, rooms, userPosition]);
+
+  if (!navInfo) return null;
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 20,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 9999,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 8,
-        maxWidth: '92vw',
-      }}
-    >
+    <>
+      {/* 1. Thanh thông báo chỉ hướng Turn-by-Turn trên đầu - Đồng bộ 1 màu xanh nước biển phẳng hoàn toàn */}
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
+          position: 'absolute',
+          top: 'max(14px, env(safe-area-inset-top, 14px))',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000000,
+          width: 'calc(100% - 24px)',
+          maxWidth: 420,
+          background: '#1a73e8', // 1 màu xanh nước biển bình thường
+          borderRadius: 18,
           color: '#ffffff',
-          padding: '10px 18px',
-          borderRadius: 24,
-          boxShadow: '0 8px 30px rgba(30, 58, 138, 0.5)',
-          border: '1px solid rgba(147, 197, 253, 0.4)',
-          backdropFilter: 'blur(12px)',
+          overflow: 'hidden',
+          border: 'none',
+          boxShadow: 'none',
+          animation: 'slideDown 0.25s ease-out',
         }}
       >
-        <span style={{ fontSize: 20 }}>⬆️</span>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontSize: 14, fontWeight: 700 }}>
-            {remainingMeters > 3 ? `Còn khoảng ${remainingMeters}m nữa tới nơi` : '🎉 Bạn đã đến trước cửa phòng!'}
-          </span>
-          <span style={{ fontSize: 11, color: '#bfdbfe' }}>
-            {isFollowingUser ? '🟢 Đang tự động đi theo bước chân bạn' : 'Đi dọc hành lang theo vạch xanh'}
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', padding: '12px 14px', gap: 10 }}>
+          {/* Icon mũi tên vector trắng trực tiếp trên nền xanh, cùng 1 màu đồng nhất */}
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            {navInfo.actionType === 'straight' && (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5" />
+                <polyline points="6 11 12 5 18 11" />
+              </svg>
+            )}
+            {navInfo.actionType === 'right' && (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 19v-6a4 4 0 0 1 4-4h9" />
+                <polyline points="15 5 19 9 15 13" />
+              </svg>
+            )}
+            {navInfo.actionType === 'left' && (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 19v-6a4 4 0 0 0-4-4H6" />
+                <polyline points="9 5 5 9 9 13" />
+              </svg>
+            )}
+            {navInfo.actionType === 'arrive' && (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+              </svg>
+            )}
+          </div>
+
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+                {navInfo.meters > 3 ? `${navInfo.meters} m` : 'Đã tới'}
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: '#e0edff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {navInfo.actionText}
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: '#c7dcff', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Đến: <strong style={{ color: '#ffffff', fontWeight: 600 }}>{navInfo.destName}</strong>
+            </div>
+          </div>
         </div>
       </div>
 
-    </div>
+      {/* 2. Thanh điều hướng ở dưới đáy chuẩn Google Maps: Tổng phút, khoảng cách & nút Thoát */}
+      <div
+        style={{
+          position: 'fixed',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 1000000,
+          display: 'flex',
+          justifyContent: 'center',
+          padding: '0 12px max(14px, env(safe-area-inset-bottom, 14px))',
+          pointerEvents: 'none',
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            maxWidth: 440,
+            background: 'rgba(15, 23, 42, 0.95)',
+            backdropFilter: 'blur(28px) saturate(190%)',
+            WebkitBackdropFilter: 'blur(28px) saturate(190%)',
+            borderRadius: 24,
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.12)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            padding: '12px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 14,
+            pointerEvents: 'auto',
+            animation: 'slideUp 0.25s ease-out',
+          }}
+        >
+          {/* Thông tin thời gian & khoảng cách tổng */}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
+              <span style={{ fontSize: 22, fontWeight: 800, color: '#22c55e', letterSpacing: '-0.5px' }}>
+                {navInfo.totalMinutes} phút
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#94a3b8' }}>
+                ({navInfo.totalMeters} m)
+              </span>
+            </div>
+            <div style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 500, marginTop: 2 }}>
+              Dự kiến đến lúc <strong style={{ color: '#f8fafc' }}>{navInfo.etaString}</strong>
+            </div>
+          </div>
+
+          {/* Nút Thoát hành trình chuẩn Google Maps */}
+          <button
+            type="button"
+            onClick={clearNavigation}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              background: '#ef4444',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: 20,
+              padding: '10px 18px',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: 'none',
+              transition: 'opacity 0.15s ease',
+              flexShrink: 0,
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+            <span>Thoát</span>
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 

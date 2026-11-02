@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useMapStore } from '../store/useMapStore';
 
 export function MapControlBar() {
-  const cameraRotationAngle = useMapStore((s) => s.cameraRotationAngle);
-  const triggerResetNorth = useMapStore((s) => s.triggerResetNorth);
   const isFollowingUser = useMapStore((s) => s.isFollowingUser);
   const setIsFollowingUser = useMapStore((s) => s.setIsFollowingUser);
   const triggerRecenterUser = useMapStore((s) => s.triggerRecenterUser);
@@ -27,44 +25,7 @@ export function MapControlBar() {
         ...(isMobile ? styles.containerMobile : {}),
       }}
     >
-      <button
-        type="button"
-        onClick={triggerResetNorth}
-        title="Nhấn để xoay bản đồ về hướng Bắc"
-        style={styles.compassBtn}
-      >
-        <div
-          style={{
-            transform: `rotate(${-cameraRotationAngle}deg)`,
-            transition: 'transform 0.15s ease-out',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 28,
-            height: 28,
-          }}
-        >
-          <div
-            style={{
-              width: 0,
-              height: 0,
-              borderLeft: '5px solid transparent',
-              borderRight: '5px solid transparent',
-              borderBottom: '11px solid #ef4444',
-            }}
-          />
-          <div
-            style={{
-              width: 0,
-              height: 0,
-              borderLeft: '5px solid transparent',
-              borderRight: '5px solid transparent',
-              borderTop: '11px solid #94a3b8',
-            }}
-          />
-        </div>
-      </button>
+
 
       <button
         type="button"
@@ -126,7 +87,7 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     position: 'absolute',
     right: 18,
-    bottom: 24,
+    bottom: 30,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -135,8 +96,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   containerMobile: {
     right: 14,
-    bottom: 'auto',
-    top: 76,
+    bottom: 110,
+    top: 'auto',
     zIndex: 9999,
   },
   compassBtn: {
