@@ -3,6 +3,7 @@ import { MapCanvas } from './components/MapCanvas';
 import { CoordHUD } from './components/CoordHUD';
 import { RoomListManager } from './components/RoomListManager';
 import { AdminDashboard } from './components/AdminDashboard';
+import { AdminLogin } from './components/AdminLogin';
 import { MapControlBar } from './components/MapControlBar';
 import { GoogleMapsSearchBar } from './components/GoogleMapsSearchBar';
 import { GoogleMapsBottomCard } from './components/GoogleMapsBottomCard';
@@ -26,11 +27,58 @@ function App() {
   const setDeviceHeading = useMapStore((s) => s.setDeviceHeading);
 
   useEffect(() => {
-    useMapStore.setState({ floors: SAMPLE_FLOORS.filter(f => f.id === 1), currentFloor: 1 });
-    setRooms(SAMPLE_ROOMS); // Chỉ lấy danh sách phòng ở Lầu 1
+    // Khôi phục danh sách tầng đã lưu (nếu có thêm tầng từ Admin)
+    try {
+      const savedFloors = localStorage.getItem('inmap7a_custom_floors');
+      if (savedFloors) {
+        const parsed = JSON.parse(savedFloors);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          useMapStore.setState({ floors: parsed, currentFloor: 1 });
+        } else {
+          useMapStore.setState({ floors: SAMPLE_FLOORS.filter(f => f.id === 1), currentFloor: 1 });
+        }
+      } else {
+        useMapStore.setState({ floors: SAMPLE_FLOORS.filter(f => f.id === 1), currentFloor: 1 });
+      }
+    } catch {
+      useMapStore.setState({ floors: SAMPLE_FLOORS.filter(f => f.id === 1), currentFloor: 1 });
+    }
+    
+    // Khôi phục phòng đã lưu nếu admin từng sửa tên hoặc thêm phòng
+    try {
+      const saved = localStorage.getItem('inmap7a_custom_rooms');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setRooms(parsed);
+        } else {
+          setRooms(SAMPLE_ROOMS);
+        }
+      } else {
+        setRooms(SAMPLE_ROOMS);
+      }
+    } catch {
+      setRooms(SAMPLE_ROOMS);
+    }
+
     setNavData(SAMPLE_NAV_NODES, SAMPLE_NAV_EDGES);
 
-    setBeacons([]);
+    // Khôi phục danh sách Beacons đã cấu hình nếu có
+    try {
+      const savedBeacons = localStorage.getItem('inmap7a_custom_beacons');
+      if (savedBeacons) {
+        const parsed = JSON.parse(savedBeacons);
+        if (Array.isArray(parsed)) {
+          setBeacons(parsed);
+        } else {
+          setBeacons([]);
+        }
+      } else {
+        setBeacons([]);
+      }
+    } catch {
+      setBeacons([]);
+    }
     // Không cố định vị trí ở thang máy nữa - để null chờ nhận vị trí từ Beacon/Người dùng chọn
     setUserPosition(null);
 
@@ -38,8 +86,49 @@ function App() {
       setDeviceHeading(heading);
     });
 
+    // Kết nối Webhook Server (SSE) để tự động nhận vị trí từ App React Native
+    let eventSource: EventSource | null = null;
+    try {
+      const serverPort = 3001;
+      const sseUrl = `http://${window.location.hostname || 'localhost'}:${serverPort}/api/events`;
+      eventSource = new EventSource(sseUrl);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && data.userPosition) {
+            // Nhận tọa độ trực tiếp từ Mobile
+            setUserPosition({ x: data.userPosition.x, z: data.userPosition.z });
+            if (typeof data.userPosition.floor === 'number') {
+              useMapStore.getState().setCurrentFloor(data.userPosition.floor);
+            }
+          } else if (data && Array.isArray(data.beacons)) {
+            // Nhận danh sách beacon quét được từ Mobile để tự tính tọa độ
+            const currentBeacons = useMapStore.getState().beacons;
+            if (currentBeacons.length > 0 && data.beacons.length > 0) {
+              const matched = currentBeacons.find((b) => b.minor === data.beacons[0]?.minor);
+              if (matched) {
+                setUserPosition(matched.position);
+              }
+            }
+          }
+        } catch {
+          // ignore
+        }
+      };
+
+      eventSource.onerror = () => {
+        // Server webhook chưa chạy hoặc ngắt kết nối
+      };
+    } catch {
+      // ignore
+    }
+
     return () => {
       stopCompass();
+      if (eventSource) {
+        eventSource.close();
+      }
     };
   }, [setRooms, setNavData, setBeacons, setUserPosition, setDeviceHeading]);
 
@@ -61,6 +150,7 @@ function App() {
   const [isAdminPath, setIsAdminPath] = useState(
     () => window.location.pathname.startsWith('/admin') || window.location.hash.startsWith('#admin')
   );
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   useEffect(() => {
     const handleLocationChange = () => {
@@ -77,6 +167,18 @@ function App() {
   }, []);
 
   if (isAdminPath) {
+    if (!isAdminAuthenticated) {
+      return (
+        <AdminLogin
+          onSuccess={() => setIsAdminAuthenticated(true)}
+          onCancel={() => {
+            window.location.hash = '';
+            window.history.pushState(null, '', '/');
+            setIsAdminPath(false);
+          }}
+        />
+      );
+    }
     return <AdminDashboard />;
   }
 
@@ -220,12 +322,12 @@ function FloatingNavActions() {
           zIndex: 1000000,
           width: 'calc(100% - 24px)',
           maxWidth: 420,
-          background: '#1a73e8', // 1 màu xanh nước biển bình thường
-          borderRadius: 18,
+          background: '#0d65d9', // Xanh Google Maps Navigation thực tế: đầm, chắc, chuẩn app bản đồ thật
+          borderRadius: 16,
           color: '#ffffff',
           overflow: 'hidden',
           border: 'none',
-          boxShadow: 'none',
+          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
           animation: 'slideDown 0.25s ease-out',
         }}
       >

@@ -59,6 +59,7 @@ export function MapControlBar() {
         <button
           type="button"
           onClick={triggerZoomIn}
+          onPointerDown={(e) => e.stopPropagation()}
           title="Phóng to bản đồ"
           style={styles.zoomBtnTop}
         >
@@ -71,6 +72,7 @@ export function MapControlBar() {
         <button
           type="button"
           onClick={triggerZoomOut}
+          onPointerDown={(e) => e.stopPropagation()}
           title="Thu nhỏ bản đồ"
           style={styles.zoomBtnBottom}
         >

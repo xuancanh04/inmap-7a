@@ -49,9 +49,11 @@ export interface MapStoreState {
   building3DMode: boolean;
 
   setCurrentFloor: (floor: number) => void;
+  addFloor: (floor: Floor) => void;
   toggleBuilding3DMode: () => void;
   setRooms: (rooms: Room[]) => void;
   addRoom: (room: Room) => void;
+  updateRoom: (roomId: string, updates: Partial<Room>) => void;
   removeRoom: (roomId: string) => void;
   setBeacons: (beacons: BeaconDevice[]) => void;
   toggleShowBeacons: () => void;
@@ -124,21 +126,61 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
   building3DMode: false,
 
   setCurrentFloor: (floor) => set({ currentFloor: floor }),
+  addFloor: (floor) =>
+    set((state) => {
+      const nextFloors = [...state.floors, floor];
+      try {
+        localStorage.setItem('inmap7a_custom_floors', JSON.stringify(nextFloors));
+      } catch {
+        // ignore
+      }
+      return { floors: nextFloors, currentFloor: floor.id };
+    }),
   toggleBuilding3DMode: () => set((state) => ({ building3DMode: !state.building3DMode })),
 
   setRooms: (rooms) => set({ rooms }),
 
   addRoom: (room) =>
-    set((state) => ({
-      rooms: [...state.rooms, room],
-    })),
+    set((state) => {
+      const nextRooms = [...state.rooms, room];
+      try {
+        localStorage.setItem('inmap7a_custom_rooms', JSON.stringify(nextRooms));
+      } catch {
+        // ignore
+      }
+      return { rooms: nextRooms };
+    }),
+
+  updateRoom: (roomId, updates) =>
+    set((state) => {
+      const nextRooms = state.rooms.map((r) => (r.id === roomId ? { ...r, ...updates } : r));
+      try {
+        localStorage.setItem('inmap7a_custom_rooms', JSON.stringify(nextRooms));
+      } catch {
+        // ignore
+      }
+      return { rooms: nextRooms };
+    }),
 
   removeRoom: (roomId) =>
-    set((state) => ({
-      rooms: state.rooms.filter((r) => r.id !== roomId),
-    })),
+    set((state) => {
+      const nextRooms = state.rooms.filter((r) => r.id !== roomId);
+      try {
+        localStorage.setItem('inmap7a_custom_rooms', JSON.stringify(nextRooms));
+      } catch {
+        // ignore
+      }
+      return { rooms: nextRooms };
+    }),
 
-  setBeacons: (beacons) => set({ beacons }),
+  setBeacons: (beacons) => {
+    try {
+      localStorage.setItem('inmap7a_custom_beacons', JSON.stringify(beacons));
+    } catch {
+      // ignore
+    }
+    set({ beacons });
+  },
   toggleShowBeacons: () => set((state) => ({ showBeacons: !state.showBeacons })),
   setBleScanning: (scanning) => set({ isBleScanning: scanning }),
   setDeviceHeading: (heading) => set({ deviceHeading: heading }),

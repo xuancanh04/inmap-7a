@@ -24,6 +24,7 @@ export function RoomListManager() {
 
   const [roomName, setRoomName] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<typeof FUNCTION_GROUPS[number]['id']>('medical');
+  const [doorSideChoice, setDoorSideChoice] = useState<'auto' | 'north' | 'south' | 'east' | 'west' | 'none'>('auto');
   const [filterSearch, setFilterSearch] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -56,6 +57,7 @@ export function RoomListManager() {
       center: centroid,
       color: currentColor,
       type: selectedGroup as Room['type'],
+      doorSide: doorSideChoice,
       description: `Phòng ${name} - Tầng ${currentFloor}`,
     };
 
@@ -71,6 +73,7 @@ export function RoomListManager() {
     selectedGroup,
     addRoom,
     clearBuilderPoints,
+    doorSideChoice,
   ]);
 
   const handleExportJSON = useCallback(() => {
@@ -115,10 +118,9 @@ export function RoomListManager() {
     <div style={styles.container}>
       <div style={styles.header}>
         <div style={styles.headerTitleRow}>
-          <span style={styles.headerIcon}>🏢</span>
           <div>
-            <div style={styles.headerTitle}>Room List Manager (Tầng {currentFloor})</div>
-            <div style={styles.headerSubtitle}>Tự động dựng phòng 3D từ bản vẽ 2D</div>
+            <div style={styles.headerTitle}>Quản lý tạo phòng 3D (Tầng {currentFloor})</div>
+            <div style={styles.headerSubtitle}>Tự động dựng tường & đục cửa từ tọa độ bản vẽ</div>
           </div>
         </div>
         <div style={styles.headerActions}>
@@ -127,7 +129,7 @@ export function RoomListManager() {
             style={styles.btnIcon}
             title={isCollapsed ? 'Mở rộng' : 'Thu gọn'}
           >
-            {isCollapsed ? '▼' : '▲'}
+            {isCollapsed ? '▾' : '▴'}
           </button>
           <button
             onClick={toggleBuilderMode}
@@ -145,34 +147,34 @@ export function RoomListManager() {
             <div style={styles.sectionHeader}>
               <span style={styles.sectionTitle}>1. Tạo khối phòng mới</span>
               <span style={styles.pointsBadge}>
-                {builderPoints.length} điểm đã click
+                {builderPoints.length} điểm đã chọn
               </span>
             </div>
 
             <div style={styles.pointsStatus}>
               {builderPoints.length === 0 ? (
                 <div style={styles.pointsHint}>
-                  👉 Hãy click các góc phòng trên bản đồ sàn để lấy tọa độ polygon.
+                  Click các góc phòng trên sàn 3D để tạo đa giác (tối thiểu 3 điểm).
                 </div>
               ) : (
                 <div style={styles.pointsList}>
                   <div style={styles.centroidInfo}>
-                    Tâm đa giác (Centroid): ({currentCentroid.x}, {currentCentroid.z})
-                    {currentArea > 0 && ` • Diện tích ≈ ${currentArea}m²`}
+                    Tọa độ tâm: ({currentCentroid.x}, {currentCentroid.z})
+                    {currentArea > 0 && ` • Diện tích: ~${currentArea}m²`}
                   </div>
                   <div style={styles.pointsRow}>
                     {builderPoints.map((p, i) => (
                       <span key={i} style={styles.pointTag}>
-                        #{i + 1}: ({p.x}, {p.z})
+                        #{i + 1} ({p.x}, {p.z})
                       </span>
                     ))}
                   </div>
                   <div style={styles.btnRowMini}>
                     <button onClick={popBuilderPoint} style={styles.btnMini}>
-                      ↩ Xóa điểm cuối
+                      Xóa điểm cuối
                     </button>
                     <button onClick={clearBuilderPoints} style={styles.btnMiniDanger}>
-                      🗑 Xóa hết
+                      Xóa tất cả
                     </button>
                   </div>
                 </div>
@@ -180,7 +182,7 @@ export function RoomListManager() {
             </div>
 
             <div style={styles.inputGroup}>
-              <label style={styles.label}>Tên phòng:</label>
+              <label style={styles.label}>Tên phòng</label>
               <input
                 type="text"
                 placeholder="VD: Phòng Hành chính, Cấp cứu..."
@@ -191,7 +193,7 @@ export function RoomListManager() {
             </div>
 
             <div style={styles.inputGroup}>
-              <label style={styles.label}>Nhóm chức năng & Màu nhận diện:</label>
+              <label style={styles.label}>Nhóm chức năng & Màu</label>
               <select
                 value={selectedGroup}
                 onChange={(e) => setSelectedGroup(e.target.value as typeof selectedGroup)}
@@ -205,6 +207,22 @@ export function RoomListManager() {
               </select>
             </div>
 
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Vị trí mở cửa phòng</label>
+              <select
+                value={doorSideChoice}
+                onChange={(e) => setDoorSideChoice(e.target.value as typeof doorSideChoice)}
+                style={styles.selectInput}
+              >
+                <option value="auto">Tự động (cạnh dài nhất)</option>
+                <option value="north">Hướng Bắc (phía trên)</option>
+                <option value="south">Hướng Nam (phía dưới)</option>
+                <option value="east">Hướng Đông (bên phải)</option>
+                <option value="west">Hướng Tây (bên trái)</option>
+                <option value="none">Tường kín (không mở cửa)</option>
+              </select>
+            </div>
+
             <button
               onClick={handleCreateRoom}
               disabled={builderPoints.length < 3}
@@ -213,23 +231,23 @@ export function RoomListManager() {
                 ...(builderPoints.length < 3 ? styles.btnDisabled : {}),
               }}
             >
-              ✨ Tự Động Đùn Khối 3D (Extrude)
+              Tạo phòng & Dựng tường 3D
             </button>
           </div>
 
           <div style={styles.section}>
             <div style={styles.sectionHeader}>
               <span style={styles.sectionTitle}>
-                2. Danh sách phòng 3D ({filteredRooms.length})
+                2. Danh sách phòng ({filteredRooms.length})
               </span>
               <button onClick={handleExportJSON} style={styles.btnExport} title="Tải file JSON">
-                💾 Xuất JSON
+                Xuất JSON
               </button>
             </div>
 
             <input
               type="text"
-              placeholder="🔍 Tìm nhanh phòng..."
+              placeholder="Tìm nhanh tên phòng..."
               value={filterSearch}
               onChange={(e) => setFilterSearch(e.target.value)}
               style={styles.searchBar}
@@ -242,12 +260,6 @@ export function RoomListManager() {
                 filteredRooms.map((r) => (
                   <div key={r.id} style={styles.roomCard}>
                     <div style={styles.roomCardLeft}>
-                      <span
-                        style={{
-                          ...styles.colorDot,
-                          backgroundColor: r.color,
-                        }}
-                      />
                       <div>
                         <div style={styles.roomCardName}>{r.name}</div>
                         <div style={styles.roomCardDetails}>
