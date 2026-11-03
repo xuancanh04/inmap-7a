@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { MapCanvas } from './MapCanvas';
+import { RoomListManager } from './RoomListManager';
 import { useMapStore } from '../store/useMapStore';
 import {
   startWebBleBeaconScanner,
@@ -9,8 +10,6 @@ import {
 export function AdminDashboard() {
   const beacons = useMapStore((s) => s.beacons);
   const setBeacons = useMapStore((s) => s.setBeacons);
-  const showBeacons = useMapStore((s) => s.showBeacons);
-  const toggleShowBeacons = useMapStore((s) => s.toggleShowBeacons);
   const activeBeaconMinor = useMapStore((s) => s.activeBeaconMinor);
   const simulateNearestBeacon = useMapStore((s) => s.simulateNearestBeacon);
   const isBleScanning = useMapStore((s) => s.isBleScanning);
@@ -20,8 +19,24 @@ export function AdminDashboard() {
   const floors = useMapStore((s) => s.floors);
   const userPosition = useMapStore((s) => s.userPosition);
   const rooms = useMapStore((s) => s.rooms);
+  const updateRoom = useMapStore((s) => s.updateRoom);
+  const addFloor = useMapStore((s) => s.addFloor);
+  const builderMode = useMapStore((s) => s.builderMode);
+  const toggleBuilderMode = useMapStore((s) => s.toggleBuilderMode);
+  const builderPoints = useMapStore((s) => s.builderPoints);
 
-  const [activeTab, setActiveTab] = useState<'beacons' | 'scanner' | 'add'>('beacons');
+  const [activeTab, setActiveTab] = useState<'rooms' | 'beacons' | 'scanner' | 'add'>('rooms');
+  const [showAddFloorModal, setShowAddFloorModal] = useState(false);
+  const [newFloorNumber, setNewFloorNumber] = useState<number>(2);
+  const [newFloorName, setNewFloorName] = useState('');
+  const [newFloorImage, setNewFloorImage] = useState<string>('');
+  const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
+  const [editingRoomName, setEditingRoomName] = useState('');
+  const [editingRoomDesc, setEditingRoomDesc] = useState('');
+  const [editingDoorSide, setEditingDoorSide] = useState<string>('auto');
+  const [editingNoWall, setEditingNoWall] = useState<boolean>(false);
+  const [editingWallColor, setEditingWallColor] = useState<string>('#38bdf8');
+  const [roomSearchFilter, setRoomSearchFilter] = useState('');
   const [bleStatusText, setBleStatusText] = useState<string>('');
   const [searchFilter, setSearchFilter] = useState('');
 
@@ -136,6 +151,40 @@ export function AdminDashboard() {
 
         {!isMobile ? (
           <div style={styles.statusChips}>
+            {/* Nút Bật Room Builder Dựng Tường / Phòng trực tiếp */}
+            <button
+              type="button"
+              onClick={toggleBuilderMode}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 14px',
+                borderRadius: 10,
+                background: builderMode ? '#0284c7' : 'rgba(56, 189, 248, 0.15)',
+                color: '#ffffff',
+                border: builderMode ? '1.5px solid #38bdf8' : '1px solid rgba(56, 189, 248, 0.35)',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: builderMode ? '0 0 16px rgba(56, 189, 248, 0.4)' : 'none',
+              }}
+              title="Click các điểm trên sàn để vẽ tường & tạo phòng mới"
+            >
+              <span>{builderMode ? 'Đang vẽ tường...' : 'Vẽ tường / Tạo phòng'}</span>
+              {builderPoints.length > 0 && (
+                <span style={{
+                  padding: '1px 6px',
+                  borderRadius: 8,
+                  background: '#ef4444',
+                  fontSize: 10,
+                }}>
+                  {builderPoints.length} điểm
+                </span>
+              )}
+            </button>
+
+            <div style={styles.chipDivider} />
             <div style={styles.chipItem}>
               <span style={{ color: '#60a5fa' }}>📡 Beacons:</span>
               <strong>{beacons.length} mốc</strong>
@@ -209,9 +258,39 @@ export function AdminDashboard() {
                 {f.id === 0 ? 'Tầng Trệt' : `Tầng ${f.id}`}
               </button>
             ))}
+
+            {/* Nút Thêm Tầng Mới */}
+            <button
+              onClick={() => {
+                const maxFloorId = floors.length > 0 ? Math.max(...floors.map((f) => f.id)) : 1;
+                setNewFloorNumber(maxFloorId + 1);
+                setNewFloorName(`Tầng ${maxFloorId + 1} — Khu Khám Bệnh & Chuyên Khoa`);
+                setNewFloorImage('');
+                setShowAddFloorModal(true);
+              }}
+              style={{
+                ...styles.floorBtn,
+                background: 'rgba(56, 189, 248, 0.15)',
+                color: '#38bdf8',
+                border: '1px dashed #38bdf8',
+                fontWeight: 700,
+              }}
+              title="Thêm tầng mới cho bệnh viện"
+            >
+              + Thêm Tầng
+            </button>
           </div>
 
           <div style={styles.subTabs}>
+            <button
+              onClick={() => setActiveTab('rooms')}
+              style={{
+                ...styles.subTabBtn,
+                ...(activeTab === 'rooms' ? styles.subTabBtnActive : {}),
+              }}
+            >
+              Phòng ({rooms.filter((r) => r.floor === currentFloor).length})
+            </button>
             <button
               onClick={() => setActiveTab('beacons')}
               style={{
@@ -219,7 +298,7 @@ export function AdminDashboard() {
                 ...(activeTab === 'beacons' ? styles.subTabBtnActive : {}),
               }}
             >
-              📋 Danh Sách ({filteredBeacons.length})
+              Beacons ({filteredBeacons.length})
             </button>
             <button
               onClick={() => setActiveTab('add')}
@@ -228,7 +307,7 @@ export function AdminDashboard() {
                 ...(activeTab === 'add' ? styles.subTabBtnActive : {}),
               }}
             >
-              ➕ Thêm Mới
+              Thêm Mới
             </button>
             <button
               onClick={() => setActiveTab('scanner')}
@@ -237,11 +316,301 @@ export function AdminDashboard() {
                 ...(activeTab === 'scanner' ? styles.subTabBtnActive : {}),
               }}
             >
-              ⚡ Quét & USB
+              Quét & USB
             </button>
           </div>
 
           <div style={styles.tabContent}>
+            {activeTab === 'rooms' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm phòng..."
+                  value={roomSearchFilter}
+                  onChange={(e) => setRoomSearchFilter(e.target.value)}
+                  style={styles.searchInput}
+                />
+
+                <div style={{ fontSize: 11, color: '#94a3b8', padding: '2px 4px' }}>
+                  Tên phòng sửa tại đây sẽ <strong>đồng bộ ngay lập tức</strong> sang giao diện tìm kiếm và dẫn đường.
+                </div>
+
+                {/* Nút hành động nhanh: Bắt đầu vẽ phòng cho tầng này */}
+                <button
+                  type="button"
+                  onClick={toggleBuilderMode}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    padding: '10px 14px',
+                    borderRadius: 12,
+                    background: builderMode ? '#0284c7' : 'rgba(56, 189, 248, 0.15)',
+                    color: '#ffffff',
+                    border: builderMode ? '1.5px solid #38bdf8' : '1px solid rgba(56, 189, 248, 0.3)',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: builderMode ? '0 0 16px rgba(56, 189, 248, 0.35)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span>{builderMode ? 'Đang chế độ vẽ tường (Click sàn)' : '+ Vẽ tường & tạo phòng mới'}</span>
+                </button>
+
+                {rooms.filter((r) => r.floor === currentFloor).length === 0 && (
+                  <div style={{
+                    padding: '24px 16px',
+                    textAlign: 'center',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: 14,
+                    border: '1px dashed rgba(255, 255, 255, 0.12)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>
+                      Tầng {currentFloor} hiện chưa có phòng nào!
+                    </div>
+                    <div style={{ fontSize: 11, color: '#94a3b8', maxWidth: 280, lineHeight: 1.5 }}>
+                      Bấm nút <strong>"+ Vẽ tường & tạo phòng mới"</strong> ở trên, sau đó click các điểm góc trên mặt sàn để tự động dựng tường 3D và đục cửa.
+                    </div>
+                  </div>
+                )}
+
+                {rooms
+                  .filter((r) => r.floor === currentFloor)
+                  .filter((r) =>
+                    r.name.toLowerCase().includes(roomSearchFilter.toLowerCase()) ||
+                    r.description?.toLowerCase().includes(roomSearchFilter.toLowerCase())
+                  )
+                  .map((r) => {
+                    const isEditing = editingRoomId === r.id;
+                    return (
+                      <div
+                        key={r.id}
+                        style={{
+                          padding: 12,
+                          borderRadius: 14,
+                          background: 'rgba(255, 255, 255, 0.04)',
+                          border: isEditing ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 8,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {isEditing ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 8 }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#38bdf8', letterSpacing: '0.04em' }}>
+                                CHỈNH SỬA THÔNG TIN PHÒNG
+                              </span>
+                              <span style={{ fontSize: 11, color: '#64748b' }}>
+                                ID: {r.id}
+                              </span>
+                            </div>
+
+                            <div>
+                              <label style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
+                                Tên phòng hiển thị
+                              </label>
+                              <input
+                                type="text"
+                                value={editingRoomName}
+                                onChange={(e) => setEditingRoomName(e.target.value)}
+                                placeholder="Nhập tên phòng..."
+                                style={{
+                                  ...styles.formInput,
+                                  borderColor: 'rgba(56, 189, 248, 0.4)',
+                                  background: 'rgba(15, 23, 42, 0.6)',
+                                }}
+                                autoFocus
+                              />
+                            </div>
+
+                            <div>
+                              <label style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
+                                Mô tả / Chức năng
+                              </label>
+                              <input
+                                type="text"
+                                value={editingRoomDesc}
+                                onChange={(e) => setEditingRoomDesc(e.target.value)}
+                                placeholder="Mô tả chức năng phòng..."
+                                style={styles.formInput}
+                              />
+                            </div>
+
+                            {/* Cấu hình cửa & tường 3D */}
+                            <div style={{
+                              padding: 12,
+                              borderRadius: 10,
+                              background: 'rgba(15, 23, 42, 0.45)',
+                              border: '1px solid rgba(255, 255, 255, 0.08)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 10,
+                            }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0', letterSpacing: '0.03em' }}>
+                                CẤU HÌNH TƯỜNG & CỬA 3D
+                              </div>
+
+                              <div>
+                                <label style={{ fontSize: 11, fontWeight: 500, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
+                                  Hướng mở cửa
+                                </label>
+                                <select
+                                  value={editingDoorSide}
+                                  onChange={(e) => setEditingDoorSide(e.target.value)}
+                                  style={{ ...styles.formSelect, width: '100%' }}
+                                >
+                                  <option value="auto">Tự động (theo cạnh dài nhất)</option>
+                                  <option value="north">Hướng Bắc (phía trên)</option>
+                                  <option value="south">Hướng Nam (phía dưới)</option>
+                                  <option value="east">Hướng Đông (bên phải)</option>
+                                  <option value="west">Hướng Tây (bên trái)</option>
+                                  <option value="none">Tường kín (không mở cửa)</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label style={{ fontSize: 11, fontWeight: 500, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
+                                  Kiểu tường
+                                </label>
+                                <select
+                                  value={editingNoWall ? 'true' : 'false'}
+                                  onChange={(e) => setEditingNoWall(e.target.value === 'true')}
+                                  style={{ ...styles.formSelect, width: '100%' }}
+                                >
+                                  <option value="false">Tường tiêu chuẩn (dựng tường quanh phòng)</option>
+                                  <option value="true">Sảnh mở / Không gian thông (không dựng tường)</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label style={{ fontSize: 11, fontWeight: 500, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
+                                  Màu tường phòng
+                                </label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  <input
+                                    type="color"
+                                    value={editingWallColor}
+                                    onChange={(e) => setEditingWallColor(e.target.value)}
+                                    style={{
+                                      width: 40,
+                                      height: 32,
+                                      padding: 0,
+                                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                                      borderRadius: 6,
+                                      cursor: 'pointer',
+                                      background: 'transparent',
+                                    }}
+                                  />
+                                  <span style={{ fontSize: 12, fontFamily: 'monospace', color: '#cbd5e1', fontWeight: 600 }}>
+                                    {editingWallColor.toUpperCase()}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (editingRoomName.trim()) {
+                                    updateRoom(r.id, {
+                                      name: editingRoomName.trim(),
+                                      description: editingRoomDesc.trim(),
+                                      doorSide: editingDoorSide as 'north' | 'south' | 'east' | 'west' | 'none' | 'auto',
+                                      noWall: editingNoWall,
+                                      color: editingWallColor,
+                                    });
+                                  }
+                                  setEditingRoomId(null);
+                                }}
+                                style={{
+                                  flex: 1,
+                                  padding: '9px 14px',
+                                  borderRadius: 8,
+                                  background: '#2563eb',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)',
+                                  transition: 'background 0.15s ease',
+                                }}
+                              >
+                                Lưu thay đổi
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingRoomId(null)}
+                                style={{
+                                  padding: '9px 16px',
+                                  borderRadius: 8,
+                                  background: 'rgba(255, 255, 255, 0.08)',
+                                  color: '#94a3b8',
+                                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Hủy
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {r.name}
+                              </div>
+                              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {r.description || 'Chưa có mô tả'}
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingRoomId(r.id);
+                                setEditingRoomName(r.name);
+                                setEditingRoomDesc(r.description || '');
+                                setEditingDoorSide(r.doorSide || 'auto');
+                                setEditingNoWall(Boolean(r.noWall));
+                                setEditingWallColor(r.color || '#38bdf8');
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                padding: '6px 12px',
+                                borderRadius: 10,
+                                background: 'rgba(56, 189, 248, 0.15)',
+                                color: '#38bdf8',
+                                border: '1px solid rgba(56, 189, 248, 0.3)',
+                                fontSize: 11,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                flexShrink: 0,
+                              }}
+                            >
+                              Sửa
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+
             {activeTab === 'beacons' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <input
@@ -614,18 +983,6 @@ export function AdminDashboard() {
                   )}
                 </div>
 
-                <div style={styles.hardwareCard}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <strong style={{ fontSize: 13 }}>Cột Mốc Phát Sóng 3D</strong>
-                      <div style={{ fontSize: 11, color: '#94a3b8' }}>Hiển thị hình cầu nhấp nháy trên trần nhà</div>
-                    </div>
-                    <button onClick={toggleShowBeacons} style={styles.btnToggle3D}>
-                      {showBeacons ? 'Ẩn Trụ 3D' : 'Hiện Trụ 3D'}
-                    </button>
-                  </div>
-                </div>
-
                 {bleStatusText && (
                   <div style={styles.statusBox}>
                     <span style={styles.livePulse} />
@@ -642,8 +999,177 @@ export function AdminDashboard() {
           display: isMobile && mobileView !== 'map' ? 'none' : 'block',
         }}>
           <MapCanvas />
+          {/* Bảng công cụ vẽ phòng Room Builder trực tiếp trong Admin */}
+          <RoomListManager />
         </main>
       </div>
+
+      {/* Modal Popup Thêm Tầng Mới */}
+      {showAddFloorModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999999,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={() => setShowAddFloorModal(false)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: 440,
+              background: '#0f172a',
+              borderRadius: 24,
+              border: '1px solid rgba(255, 255, 255, 0.16)',
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.8)',
+              padding: '24px 22px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 20 }}>🏢</span>
+                <strong style={{ fontSize: 16, color: '#f8fafc' }}>Thêm Tầng & Bản Đồ Mới</strong>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddFloorModal(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: 28,
+                  height: 28,
+                  color: '#cbd5e1',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
+                  SỐ TẦNG (FLOOR NUMBER)
+                </label>
+                <input
+                  type="number"
+                  value={newFloorNumber}
+                  onChange={(e) => setNewFloorNumber(Number(e.target.value))}
+                  style={styles.formInput}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
+                  TÊN TẦNG HIỂN THỊ
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: Tầng 2 — Khoa Ngoại & Hồi Sức Cấp Cứu..."
+                  value={newFloorName}
+                  onChange={(e) => setNewFloorName(e.target.value)}
+                  style={styles.formInput}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
+                  HÌNH ẢNH SƠ ĐỒ / BẢN ĐỒ MẶT BẰNG 2D (TÙY CHỌN)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        setNewFloorImage(event.target?.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  style={{
+                    fontSize: 12,
+                    color: '#94a3b8',
+                    padding: '8px 0',
+                    cursor: 'pointer',
+                  }}
+                />
+                {newFloorImage && (
+                  <div style={{ marginTop: 8, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', height: 90 }}>
+                    <img src={newFloorImage} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (floors.some((f) => f.id === newFloorNumber)) {
+                    alert(`Tầng ${newFloorNumber} đã tồn tại! Vui lòng chọn số tầng khác.`);
+                    return;
+                  }
+                  const newFloorObj = {
+                    id: newFloorNumber,
+                    name: newFloorName.trim() || `Tầng ${newFloorNumber}`,
+                    planImageUrl: newFloorImage || undefined,
+                    width: 40,
+                    depth: 48.1,
+                  };
+                  addFloor(newFloorObj);
+                  setShowAddFloorModal(false);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: 14,
+                  background: '#0284c7',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                ✓ Tạo Tầng Mới
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAddFloorModal(false)}
+                style={{
+                  padding: '12px 18px',
+                  borderRadius: 14,
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: '#cbd5e1',
+                  border: 'none',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -726,13 +1252,14 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
     padding: '8px 16px',
     borderRadius: 12,
-    background: 'rgba(239, 68, 68, 0.15)',
-    color: '#f87171',
-    border: '1px solid rgba(239, 68, 68, 0.3)',
+    background: '#ef4444',
+    color: '#ffffff',
+    border: 'none',
+    boxShadow: 'none',
     fontSize: 12,
     fontWeight: 700,
     cursor: 'pointer',
-    transition: 'all 0.2s',
+    transition: 'opacity 0.15s ease',
   },
   mainLayout: {
     flex: 1,

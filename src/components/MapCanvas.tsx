@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef, useEffect } from 'react';
+import { Suspense, useMemo, useRef, useEffect, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
@@ -85,21 +85,42 @@ function NavigationCameraController({
   const userPosition = useMapStore((s) => s.userPosition);
   const deviceHeading = useMapStore((s) => s.deviceHeading);
   const isFollowingUser = useMapStore((s) => s.isFollowingUser);
+  const [navFollowZoomOffset, setNavFollowZoomOffset] = useState<number>(0);
 
   useFrame(({ camera }) => {
     if (!controlsRef.current) return;
     const controls = controlsRef.current;
 
-    
+    // Lấy tâm quay: chỉ dùng góc nhìn góc nhìn thứ nhất (live follow) khi có vị trí thực tế hoặc bật bám theo
+    const hasActiveUserTrack = Boolean(userPosition && (isFollowingUser || path.length >= 2));
+    const focusCenter = hasActiveUserTrack ? userPosition : null;
 
-    // Lấy tâm quay: nếu có vị trí người dùng thì theo userPosition, nếu chưa có thì lấy điểm đầu đường đi
-    const focusCenter = userPosition ?? (path.length >= 2 ? (() => {
-      const nodeMap = new Map(navNodes.map((n) => [n.id, n]));
-      return nodeMap.get(path[0])?.position ?? null;
-    })() : null);
+    // Xử lý nút bấm Phóng to / Thu nhỏ
+    if (zoomInTrigger !== lastZoomInRef.current) {
+      lastZoomInRef.current = zoomInTrigger;
+      // Dù đang có đường đi hay không, người dùng bấm zoom in sẽ ngắt chế độ tự căn fix camera
+      isNavigating.current = false;
+      if (hasActiveUserTrack) {
+        setNavFollowZoomOffset((prev) => Math.max(prev - 3, -10));
+      } else {
+        camera.position.lerp(controls.target, 0.28);
+      }
+    }
 
-    // Luôn tự động xoay camera theo hướng quay điện thoại khi có đường đi hoặc khi đang theo dõi người dùng
-    if ((isFollowingUser || path.length >= 2) && focusCenter) {
+    if (zoomOutTrigger !== lastZoomOutRef.current) {
+      lastZoomOutRef.current = zoomOutTrigger;
+      // Dù đang có đường đi hay không, người dùng bấm zoom out sẽ ngắt chế độ tự căn fix camera
+      isNavigating.current = false;
+      if (hasActiveUserTrack) {
+        setNavFollowZoomOffset((prev) => Math.min(prev + 4, 30));
+      } else {
+        const dir = camera.position.clone().sub(controls.target).normalize();
+        camera.position.addScaledVector(dir, 5.5);
+      }
+    }
+
+    // Khi người dùng có vị trí thực và đang di chuyển
+    if (hasActiveUserTrack && focusCenter) {
       // Ưu tiên góc la bàn quay điện thoại thực tế (deviceHeading) nếu có
       let headingRad = deviceHeading !== null ? THREE.MathUtils.degToRad(deviceHeading) : 0;
 
@@ -137,14 +158,20 @@ function NavigationCameraController({
       );
       controls.target.lerp(targetPos, 0.08);
 
+      const baseDistance = 8;
+      const baseHeight = 14;
+      const zoomRatio = (baseDistance + navFollowZoomOffset) / baseDistance;
+      const camDistBack = Math.max(baseDistance + navFollowZoomOffset, 3);
+      const camDistHeight = Math.max(baseHeight * zoomRatio, 5);
+
       const desiredCamPos = new THREE.Vector3(
-        focusCenter.x - forwardX * 8,
-        14,
-        focusCenter.z - forwardZ * 8
+        focusCenter.x - forwardX * camDistBack,
+        camDistHeight,
+        focusCenter.z - forwardZ * camDistBack
       );
       camera.position.lerp(desiredCamPos, 0.06);
     } else {
-
+      // Khi đang chỉ đường tổng quan (chưa có bước đi thực tế hoặc nhìn tổng quan tuyến đường)
       if (isNavigating.current && navBounds) {
         controls.target.lerp(targetLerp.current, 0.08);
         camera.position.lerp(navBounds.camPos, 0.07);
@@ -166,17 +193,6 @@ function NavigationCameraController({
       controls.target.set(userPosition.x, 0, userPosition.z);
       camera.position.set(userPosition.x, 18, userPosition.z + 14);
       controls.update();
-    }
-
-    if (zoomInTrigger !== lastZoomInRef.current) {
-      lastZoomInRef.current = zoomInTrigger;
-      camera.position.lerp(controls.target, 0.25);
-    }
-
-    if (zoomOutTrigger !== lastZoomOutRef.current) {
-      lastZoomOutRef.current = zoomOutTrigger;
-      const dir = camera.position.clone().sub(controls.target).normalize();
-      camera.position.addScaledVector(dir, 5);
     }
 
     const offset = camera.position.clone().sub(controls.target);
