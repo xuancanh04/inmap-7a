@@ -86,6 +86,29 @@ function App() {
       setDeviceHeading(heading);
     });
 
+    // Lắng nghe sự kiện truyền từ App React Native qua WebView postMessage
+    const handleNativeMessage = (event: MessageEvent) => {
+      try {
+        const raw = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (raw && raw.type === 'BEACON_UPDATE') {
+          const currentBeacons = useMapStore.getState().beacons;
+          if (raw.minor && currentBeacons.length > 0) {
+            const matched = currentBeacons.find((b) => b.minor === Number(raw.minor));
+            if (matched) {
+              setUserPosition(matched.position);
+              if (typeof matched.floor === 'number') {
+                useMapStore.getState().setCurrentFloor(matched.floor);
+              }
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('message', handleNativeMessage);
+    document.addEventListener('message', handleNativeMessage as EventListener);
+
     // Kết nối Webhook Server (SSE) để tự động nhận vị trí từ App React Native
     let eventSource: EventSource | null = null;
     try {
