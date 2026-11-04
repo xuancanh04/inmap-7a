@@ -238,7 +238,7 @@ export function MapCanvas() {
         }
       }}
       shadows
-      dpr={[1, 1.5]}
+      dpr={[1, 1.25]}
       camera={{
         position: [floorCenter[0] + 30, 35, floorCenter[2] + 30],
         fov: 45,
@@ -252,8 +252,9 @@ export function MapCanvas() {
         background: 'radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 60%, #080d1a 100%)',
       }}
       gl={{
-        antialias: true,
+        antialias: false,
         powerPreference: 'high-performance',
+        precision: 'mediump',
       }}
     >
       <Suspense fallback={null}>
@@ -319,17 +320,17 @@ export function MapCanvas() {
           ref={controlsRef}
           target={floorCenter}
           enableDamping
-          dampingFactor={0.08}
+          dampingFactor={0.12}
           minDistance={5}
           maxDistance={120}
           maxPolarAngle={Math.PI / 2.05}
           minPolarAngle={0.05}
           enableRotate={true}
-          rotateSpeed={1.0}
+          rotateSpeed={0.85}
           enableZoom={true}
-          zoomSpeed={1.2}
+          zoomSpeed={1.0}
           enablePan={true}
-          panSpeed={0.9}
+          panSpeed={0.85}
           touches={{
             ONE: THREE.TOUCH.ROTATE,
             TWO: THREE.TOUCH.DOLLY_PAN,

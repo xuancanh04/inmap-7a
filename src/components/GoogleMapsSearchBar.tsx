@@ -177,7 +177,7 @@ export function GoogleMapsSearchBar() {
         gap: 8,
       }}
     >
-      {/* 1 Thanh tìm kiếm duy nhất - Tích hợp Logo Bệnh viện Quân y 7A mới, không còn chữ trực tuyến */}
+      {/* 1 Thanh tìm kiếm duy nhất - Phong cách Google Maps hiện đại */}
       <div
         style={{
           display: 'flex',
@@ -187,38 +187,16 @@ export function GoogleMapsSearchBar() {
           backdropFilter: 'blur(28px) saturate(190%)',
           WebkitBackdropFilter: 'blur(28px) saturate(190%)',
           borderRadius: 24,
-          padding: '6px 14px 6px 8px',
+          padding: '8px 16px',
           boxShadow: '0 20px 45px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.14)',
           border: '1px solid rgba(255, 255, 255, 0.16)',
         }}
       >
-        {/* Logo Bệnh viện Quân y 7A ban đầu */}
-        <div
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 12,
-            background: '#ffffff',
-            padding: 3,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
-          }}
-          title="Bệnh viện Quân y 7A"
-        >
-          <img
-            src="/logo.png"
-            alt="Logo Bệnh viện Quân y 7A"
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-          />
-        </div>
+        <span style={{ fontSize: 16, color: '#38bdf8', flexShrink: 0 }}>🔍</span>
 
         {/* Ô nhập tìm kiếm - Tự động điền tên phòng khi đã chọn */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 13 }}>🔍</span>
             <input
               type="text"
               value={searchText !== '' ? searchText : (selectedRoom ? selectedRoom.name : '')}
@@ -347,44 +325,6 @@ export function GoogleMapsSearchBar() {
               </div>
             ))
           )}
-        </div>
-      )}
-
-      {/* Dải gợi ý nhanh các phòng khi chưa chọn phòng nào */}
-      {!selectedRoomId && !isOpen && (
-        <div
-          style={{
-            display: 'flex',
-            gap: 6,
-            overflowX: 'auto',
-            padding: '2px 4px',
-            WebkitOverflowScrolling: 'touch',
-            scrollbarWidth: 'none',
-          }}
-        >
-          {floor1Rooms.slice(0, 6).map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              onClick={() => {
-                setSelectedRoomId(r.id);
-              }}
-              style={{
-                flexShrink: 0,
-                padding: '6px 12px',
-                borderRadius: 14,
-                background: 'rgba(15, 23, 42, 0.85)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#cbd5e1',
-                fontSize: 11,
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {r.name}
-            </button>
-          ))}
         </div>
       )}
     </div>
