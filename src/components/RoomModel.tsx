@@ -14,6 +14,7 @@ interface RoomModelProps {
 export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
   const [hovered, setHovered] = useState(false);
   const destinationNodeId = useMapStore((s) => s.navigation.destinationNodeId);
+  const selectedRoomId = useMapStore((s) => s.selectedRoomId);
   const navNodes = useMapStore((s) => s.navNodes);
 
   const isDestination = useMemo(() => {
@@ -21,6 +22,8 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
     const destNode = navNodes.find((n) => n.id === destinationNodeId);
     return destNode?.roomId === room.id;
   }, [destinationNodeId, navNodes, room.id]);
+
+  const isSelected = selectedRoomId === room.id;
 
   const floorShape = useMemo(() => {
     const s = new THREE.Shape();
@@ -84,7 +87,8 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
       >
         <meshBasicMaterial
           transparent
-          opacity={0}
+          opacity={isDestination ? 0.35 : isSelected ? 0.28 : hovered ? 0.15 : 0}
+          color={isDestination ? '#22c55e' : isSelected ? (room.color || '#0284c7') : '#38bdf8'}
           depthWrite={false}
         />
       </mesh>
@@ -121,30 +125,36 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: isDestination ? '5px 12px' : hovered ? '4px 10px' : '3px 8px',
+            padding: isDestination ? '6px 14px' : isSelected ? '5px 12px' : hovered ? '4px 10px' : '3px 8px',
             borderRadius: 20,
-            fontSize: isDestination ? 12 : 11,
-            fontWeight: 700,
+            fontSize: isDestination ? 12.5 : isSelected ? 12 : 11,
+            fontWeight: 800,
             letterSpacing: '-0.2px',
             userSelect: 'none',
             whiteSpace: 'nowrap',
             backgroundColor: isDestination
               ? '#16a34a'
+              : isSelected
+              ? '#0284c7'
               : hovered
               ? '#0f172a'
-              : 'rgba(255, 255, 255, 0.94)',
-            color: isDestination ? '#ffffff' : hovered ? '#38bdf8' : '#1e293b',
+              : 'rgba(255, 255, 255, 0.95)',
+            color: isDestination || isSelected ? '#ffffff' : hovered ? '#38bdf8' : '#0f172a',
             border: isDestination
               ? '2px solid #ffffff'
+              : isSelected
+              ? '2px solid #bae6fd'
               : hovered
               ? '1.5px solid #38bdf8'
               : '1px solid rgba(0, 0, 0, 0.12)',
             boxShadow: isDestination
-              ? '0 6px 20px rgba(22, 163, 74, 0.55)'
+              ? '0 6px 22px rgba(22, 163, 74, 0.6)'
+              : isSelected
+              ? '0 6px 20px rgba(2, 132, 199, 0.55)'
               : hovered
               ? '0 6px 18px rgba(15, 23, 42, 0.35)'
-              : '0 2px 8px rgba(0, 0, 0, 0.1)',
-            transform: isDestination ? 'scale(1.15)' : hovered ? 'scale(1.06)' : 'scale(1)',
+              : '0 2px 8px rgba(0, 0, 0, 0.08)',
+            transform: isDestination ? 'scale(1.18)' : isSelected ? 'scale(1.12)' : hovered ? 'scale(1.06)' : 'scale(1)',
             transition: 'all 0.18s ease-out',
           }}
         >

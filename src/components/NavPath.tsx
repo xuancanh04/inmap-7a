@@ -12,6 +12,8 @@ export function NavPath() {
   const rooms = useMapStore((s) => s.rooms);
   const destinationNodeId = useMapStore((s) => s.navigation.destinationNodeId);
   const destMarkerRef = useRef<THREE.Mesh>(null);
+  const arrowsGroupRef = useRef<THREE.Group>(null);
+  const pulseRingsRef = useRef<THREE.Group>(null);
 
   const originNodeId = useMapStore((s) => s.navigation.originNodeId);
 
@@ -129,10 +131,44 @@ export function NavPath() {
   }, [points]);
 
   useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+
+    // Hiệu ứng floating & pulse cho điểm đích
     if (destMarkerRef.current) {
-      const t = clock.getElapsedTime();
-      const scale = 1 + 0.12 * Math.sin(t * 3);
+      const scale = 1 + 0.12 * Math.sin(t * 3.5);
       destMarkerRef.current.scale.set(scale, scale, scale);
+      destMarkerRef.current.position.y = 0.8 + 0.1 * Math.sin(t * 3);
+    }
+
+    // Hiệu ứng sóng radar phát ra liên tục tại điểm xuất phát
+    if (pulseRingsRef.current) {
+      const wave = (t * 1.5) % 1;
+      pulseRingsRef.current.scale.set(1 + wave * 1.8, 1 + wave * 1.8, 1);
+      const ringMat = (pulseRingsRef.current.children[0] as THREE.Mesh)?.material as THREE.MeshBasicMaterial;
+      if (ringMat) {
+        ringMat.opacity = Math.max(0, 0.7 * (1 - wave));
+      }
+    }
+
+    // Hiệu ứng các mũi tên di chuyển dạng dòng chảy (flowing pulse)
+    if (arrowsGroupRef.current) {
+      const children = arrowsGroupRef.current.children;
+      const count = children.length;
+      for (let i = 0; i < count; i++) {
+        const arrow = children[i] as THREE.Group;
+        // Tạo chuỗi sáng dịch chuyển tuần hoàn
+        const phase = (i * 0.25 - t * 2.8) % (Math.PI * 2);
+        const glow = Math.max(0.2, (Math.sin(phase) + 1) / 2);
+        arrow.scale.set(0.9 + glow * 0.45, 0.9 + glow * 0.45, 0.9 + glow * 0.45);
+        
+        arrow.children.forEach((mesh) => {
+          const mat = (mesh as THREE.Mesh).material as THREE.MeshBasicMaterial;
+          if (mat) {
+            mat.opacity = 0.35 + glow * 0.65;
+            mat.color.set(glow > 0.6 ? '#60a5fa' : '#ffffff');
+          }
+        });
+      }
     }
   });
 
@@ -145,19 +181,27 @@ export function NavPath() {
     <group name="navigation-path-layer">
       <Line
         points={linePoints}
-        color="#1d4ed8"
-        lineWidth={8}
-        dashed={false}
+        color="#0ea5e9"
+        lineWidth={12}
+        transparent
+        opacity={0.35}
       />
 
       <Line
         points={linePoints}
-        color="#3b82f6"
-        lineWidth={6}
-        dashed={false}
+        color="#2563eb"
+        lineWidth={7}
+        transparent
+        opacity={0.9}
       />
 
-      <group>
+      <Line
+        points={linePoints}
+        color="#60a5fa"
+        lineWidth={3}
+      />
+
+      <group ref={arrowsGroupRef}>
         {directionalArrows.map((arrow, idx) => (
           <group
             key={idx}
@@ -168,23 +212,35 @@ export function NavPath() {
               rotation={[-Math.PI / 2, 0, Math.PI / 4]}
               position={[-0.08, 0, 0]}
             >
-              <planeGeometry args={[0.07, 0.28]} />
-              <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} />
+              <planeGeometry args={[0.08, 0.32]} />
+              <meshBasicMaterial color="#ffffff" transparent opacity={0.9} side={THREE.DoubleSide} />
             </mesh>
             <mesh
               rotation={[-Math.PI / 2, 0, -Math.PI / 4]}
               position={[0.08, 0, 0]}
             >
-              <planeGeometry args={[0.07, 0.28]} />
-              <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} />
+              <planeGeometry args={[0.08, 0.32]} />
+              <meshBasicMaterial color="#ffffff" transparent opacity={0.9} side={THREE.DoubleSide} />
             </mesh>
           </group>
         ))}
       </group>
 
       <group position={[startPt.x, PATH_Y, startPt.z]}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-          <ringGeometry args={[0.3, 0.9, 32]} />
+        <group ref={pulseRingsRef}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.008, 0]}>
+            <ringGeometry args={[0.25, 0.65, 32]} />
+            <meshBasicMaterial
+              color="#38bdf8"
+              transparent
+              opacity={0.6}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
+
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
+          <ringGeometry args={[0.3, 0.8, 32]} />
           <meshBasicMaterial
             color="#60a5fa"
             transparent
