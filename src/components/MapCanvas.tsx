@@ -240,8 +240,8 @@ export function MapCanvas() {
       shadows
       dpr={[1, 1.25]}
       camera={{
-        position: [floorCenter[0] + 30, 35, floorCenter[2] + 30],
-        fov: 45,
+        position: [floorCenter[0] + 24, 30, floorCenter[2] + 26],
+        fov: 44,
         near: 0.1,
         far: 500,
       }}
@@ -320,17 +320,17 @@ export function MapCanvas() {
           ref={controlsRef}
           target={floorCenter}
           enableDamping
-          dampingFactor={0.12}
-          minDistance={5}
-          maxDistance={120}
+          dampingFactor={0.09}
+          minDistance={4}
+          maxDistance={130}
           maxPolarAngle={Math.PI / 2.05}
-          minPolarAngle={0.05}
+          minPolarAngle={0.04}
           enableRotate={true}
-          rotateSpeed={0.85}
+          rotateSpeed={1.05}
           enableZoom={true}
-          zoomSpeed={1.0}
+          zoomSpeed={1.1}
           enablePan={true}
-          panSpeed={0.85}
+          panSpeed={1.0}
           touches={{
             ONE: THREE.TOUCH.ROTATE,
             TWO: THREE.TOUCH.DOLLY_PAN,
