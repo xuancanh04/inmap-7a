@@ -249,7 +249,7 @@ export function MapCanvas() {
         width: '100%',
         height: '100%',
         touchAction: 'none',
-        background: 'radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 60%, #080d1a 100%)',
+        background: '#f8fafc',
       }}
       gl={{
         antialias: false,
@@ -283,7 +283,7 @@ export function MapCanvas() {
           color="#94a3b8"
         />
 
-        <fog attach="fog" args={['#080d1a', 70, 150]} />
+        <fog attach="fog" args={['#f8fafc', 80, 180]} />
 
         {building3DMode ? (
           <MultiFloorBuilding

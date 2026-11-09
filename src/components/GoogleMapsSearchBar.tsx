@@ -65,18 +65,25 @@ export function GoogleMapsSearchBar() {
           animation: 'slideDown 0.2s ease-out',
         }}
       >
-        {/* Nút Back quay lại tìm kiếm */}
+        {/* Nút Back quay lại bản đồ bình thường và thoát chọn phòng */}
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             clearNavigation();
+            setSelectedRoomId(null);
           }}
-          title="Quay lại"
+          onTouchEnd={(e) => {
+            e.stopPropagation();
+            clearNavigation();
+            setSelectedRoomId(null);
+          }}
+          title="Quay lại bản đồ"
           style={{
-            width: 36,
-            height: 36,
+            width: 44,
+            height: 44,
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.1)',
+            background: 'rgba(255, 255, 255, 0.12)',
             border: 'none',
             color: '#f8fafc',
             display: 'flex',
@@ -84,6 +91,8 @@ export function GoogleMapsSearchBar() {
             justifyContent: 'center',
             cursor: 'pointer',
             flexShrink: 0,
+            WebkitTapHighlightColor: 'transparent',
+            touchAction: 'manipulation',
           }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -134,25 +143,33 @@ export function GoogleMapsSearchBar() {
         {/* Nút đóng / hủy lộ trình */}
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
+            clearNavigation();
+            setSelectedRoomId(null);
+          }}
+          onTouchEnd={(e) => {
+            e.stopPropagation();
             clearNavigation();
             setSelectedRoomId(null);
           }}
           title="Đóng lộ trình"
           style={{
-            width: 32,
-            height: 32,
+            width: 40,
+            height: 40,
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.08)',
+            background: 'rgba(255, 255, 255, 0.1)',
             border: 'none',
             color: '#94a3b8',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            fontSize: 14,
+            fontSize: 16,
             fontWeight: 700,
             flexShrink: 0,
+            WebkitTapHighlightColor: 'transparent',
+            touchAction: 'manipulation',
           }}
         >
           ✕
