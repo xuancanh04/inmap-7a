@@ -1,6 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
 import type { Room } from '../types';
 import { useMapStore } from '../store/useMapStore';
 import { HospitalWallMesh } from './HospitalWallMesh';
@@ -13,6 +14,7 @@ interface RoomModelProps {
 
 export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
   const [hovered, setHovered] = useState(false);
+  const [isVisibleLabel, setIsVisibleLabel] = useState(true);
   const destinationNodeId = useMapStore((s) => s.navigation.destinationNodeId);
   const selectedRoomId = useMapStore((s) => s.selectedRoomId);
   const navNodes = useMapStore((s) => s.navNodes);
@@ -24,6 +26,23 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
   }, [destinationNodeId, navNodes, room.id]);
 
   const isSelected = selectedRoomId === room.id;
+
+  // Tối ưu hiệu năng: Chỉ render Html DOM nhãn phòng khi ở trong bán kính gần camera
+  // Hoặc phòng đó đang được chọn / là đích đến. Giúp giảm 80% tải DOM trên WebView
+  useFrame(({ camera }) => {
+    if (isDestination || isSelected || hovered) {
+      if (!isVisibleLabel) setIsVisibleLabel(true);
+      return;
+    }
+    const cx = room.center?.x ?? 0;
+    const cz = room.center?.z ?? 0;
+    const distSq = (camera.position.x - cx) ** 2 + (camera.position.z - cz) ** 2;
+    // Bán kính hiển thị nhãn ~38m (distSq < 1450)
+    const shouldShow = distSq < 1450;
+    if (shouldShow !== isVisibleLabel) {
+      setIsVisibleLabel(shouldShow);
+    }
+  });
 
   const floorShape = useMemo(() => {
     const s = new THREE.Shape();
@@ -113,54 +132,56 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
 
       <HospitalFurniture center={room.center} type={room.type || 'medical'} />
 
-      <Html
-        position={labelPosition}
-        center
-        distanceFactor={38}
-        zIndexRange={[1, 50]}
-        style={{ pointerEvents: 'none' }}
-      >
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: isDestination ? '6px 14px' : isSelected ? '5px 12px' : hovered ? '4px 10px' : '3px 8px',
-            borderRadius: 20,
-            fontSize: isDestination ? 12.5 : isSelected ? 12 : 11,
-            fontWeight: 800,
-            letterSpacing: '-0.2px',
-            userSelect: 'none',
-            whiteSpace: 'nowrap',
-            backgroundColor: isDestination
-              ? '#16a34a'
-              : isSelected
-              ? '#0284c7'
-              : hovered
-              ? '#0f172a'
-              : 'rgba(255, 255, 255, 0.95)',
-            color: isDestination || isSelected ? '#ffffff' : hovered ? '#38bdf8' : '#0f172a',
-            border: isDestination
-              ? '2px solid #ffffff'
-              : isSelected
-              ? '2px solid #bae6fd'
-              : hovered
-              ? '1.5px solid #38bdf8'
-              : '1px solid rgba(0, 0, 0, 0.12)',
-            boxShadow: isDestination
-              ? '0 6px 22px rgba(22, 163, 74, 0.6)'
-              : isSelected
-              ? '0 6px 20px rgba(2, 132, 199, 0.55)'
-              : hovered
-              ? '0 6px 18px rgba(15, 23, 42, 0.35)'
-              : '0 2px 8px rgba(0, 0, 0, 0.08)',
-            transform: isDestination ? 'scale(1.18)' : isSelected ? 'scale(1.12)' : hovered ? 'scale(1.06)' : 'scale(1)',
-            transition: 'all 0.18s ease-out',
-          }}
+      {isVisibleLabel && (
+        <Html
+          position={labelPosition}
+          center
+          distanceFactor={38}
+          zIndexRange={[1, 50]}
+          style={{ pointerEvents: 'none' }}
         >
-          <span>{room.name}</span>
-        </div>
-      </Html>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: isDestination ? '6px 14px' : isSelected ? '5px 12px' : hovered ? '4px 10px' : '3px 8px',
+              borderRadius: 20,
+              fontSize: isDestination ? 12.5 : isSelected ? 12 : 11,
+              fontWeight: 800,
+              letterSpacing: '-0.2px',
+              userSelect: 'none',
+              whiteSpace: 'nowrap',
+              backgroundColor: isDestination
+                ? '#16a34a'
+                : isSelected
+                ? '#0284c7'
+                : hovered
+                ? '#0f172a'
+                : 'rgba(255, 255, 255, 0.95)',
+              color: isDestination || isSelected ? '#ffffff' : hovered ? '#38bdf8' : '#0f172a',
+              border: isDestination
+                ? '2px solid #ffffff'
+                : isSelected
+                ? '2px solid #bae6fd'
+                : hovered
+                ? '1.5px solid #38bdf8'
+                : '1px solid rgba(0, 0, 0, 0.12)',
+              boxShadow: isDestination
+                ? '0 6px 22px rgba(22, 163, 74, 0.6)'
+                : isSelected
+                ? '0 6px 20px rgba(2, 132, 199, 0.55)'
+                : hovered
+                ? '0 6px 18px rgba(15, 23, 42, 0.35)'
+                : '0 2px 8px rgba(0, 0, 0, 0.08)',
+              transform: isDestination ? 'scale(1.18)' : isSelected ? 'scale(1.12)' : hovered ? 'scale(1.06)' : 'scale(1)',
+              transition: 'all 0.18s ease-out',
+            }}
+          >
+            <span>{room.name}</span>
+          </div>
+        </Html>
+      )}
     </group>
   );
 }

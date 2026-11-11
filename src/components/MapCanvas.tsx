@@ -237,13 +237,13 @@ export function MapCanvas() {
           setIsFollowingUser(false);
         }
       }}
-      shadows
-      dpr={[1, 1.25]}
+      shadows={false}
+      dpr={1}
       camera={{
         position: [floorCenter[0] + 24, 30, floorCenter[2] + 26],
         fov: 44,
         near: 0.1,
-        far: 500,
+        far: 350,
       }}
       style={{
         width: '100%',
@@ -255,32 +255,26 @@ export function MapCanvas() {
         antialias: false,
         powerPreference: 'high-performance',
         precision: 'mediump',
+        depth: true,
+        stencil: false,
       }}
     >
       <Suspense fallback={null}>
-        <ambientLight intensity={0.85} color="#ffffff" />
+        <ambientLight intensity={1.15} color="#ffffff" />
         <directionalLight
           position={[35, 50, 30]}
-          intensity={1.3}
+          intensity={1.0}
           color="#ffffff"
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
-          shadow-camera-far={140}
-          shadow-camera-left={-45}
-          shadow-camera-right={45}
-          shadow-camera-top={45}
-          shadow-camera-bottom={-45}
         />
         <directionalLight
           position={[-30, 30, -25]}
-          intensity={0.5}
-          color="#38bdf8"
+          intensity={0.4}
+          color="#e0f2fe"
         />
         <directionalLight
           position={[0, -20, 0]}
-          intensity={0.15}
-          color="#94a3b8"
+          intensity={0.2}
+          color="#cbd5e1"
         />
 
         <fog attach="fog" args={['#f8fafc', 80, 180]} />
