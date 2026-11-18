@@ -37,11 +37,7 @@ function NavigationCameraController({
     if (pts.length < 2 || !pts[0] || !pts[1]) return null;
 
     const start = pts[0].position;
-
-    
     const dest = pts[pts.length - 1]!.position;
-
-    // Đường đi hợp lệ từ start đến dest
 
     // Tâm đường đi thực tế giữa điểm đầu và điểm cuối
     const midX = (start.x + dest.x) / 2;
@@ -82,6 +78,7 @@ function NavigationCameraController({
     }
   }, [navBounds, floorCenter]);
 
+  const isNavigatingActive = useMapStore((s) => s.isNavigatingActive);
   const userPosition = useMapStore((s) => s.userPosition);
   const deviceHeading = useMapStore((s) => s.deviceHeading);
   const isFollowingUser = useMapStore((s) => s.isFollowingUser);
@@ -91,8 +88,11 @@ function NavigationCameraController({
     if (!controlsRef.current) return;
     const controls = controlsRef.current;
 
-    // Lấy tâm quay: chỉ dùng góc nhìn góc nhìn thứ nhất (live follow) khi có vị trí thực tế hoặc bật bám theo
-    const hasActiveUserTrack = Boolean(userPosition && (isFollowingUser || path.length >= 2));
+    // Chỉ bật chế độ bám sát góc nhìn người đi (First-person navigation track) khi:
+    // 1. Đang bấm "Bắt đầu" dẫn đường (isNavigatingActive), HOẶC
+    // 2. Người dùng chủ động bật bám theo (isFollowingUser)
+    // Khi chỉ mới bấm "Đường đi" (xem trước lộ trình), camera sẽ giữ góc nhìn tổng quan toàn tuyến (navBounds overview)
+    const hasActiveUserTrack = Boolean(userPosition && (isNavigatingActive || isFollowingUser));
     const focusCenter = hasActiveUserTrack ? userPosition : null;
 
     // Xử lý nút bấm Phóng to / Thu nhỏ
@@ -119,13 +119,11 @@ function NavigationCameraController({
       }
     }
 
-    // Khi người dùng có vị trí thực và đang di chuyển
+    // Khi người dùng có vị trí thực và đang trong chế độ dẫn đường
     if (hasActiveUserTrack && focusCenter) {
-      // Ưu tiên góc la bàn quay điện thoại thực tế (deviceHeading) nếu có
-      let headingRad = deviceHeading !== null ? THREE.MathUtils.degToRad(deviceHeading) : 0;
-
-      // Nếu không có cảm biến la bàn, fallback theo hướng của đoạn đường đi
-      if (deviceHeading === null) {
+      // Ưu tiên tính hướng đi theo đoạn đường dẫn lộ trình (Path vector) để camera luôn nhìn thẳng theo đường đi
+      let headingRad: number | null = null;
+      if (path.length >= 2) {
         const nodeMap = new Map(navNodes.map((n) => [n.id, n]));
         const waypoints = path.map((id) => nodeMap.get(id)?.position).filter(Boolean);
         let bestDist = Infinity;
@@ -142,24 +140,29 @@ function NavigationCameraController({
         if (waypoints[segIdx] && waypoints[segIdx + 1]) {
           const segDx = waypoints[segIdx + 1]!.x - waypoints[segIdx]!.x;
           const segDz = waypoints[segIdx + 1]!.z - waypoints[segIdx]!.z;
-          if (Math.hypot(segDx, segDz) > 0.1) {
+          if (Math.hypot(segDx, segDz) > 0.05) {
             headingRad = Math.atan2(segDx, segDz);
           }
         }
+      }
+
+      // Nếu không có đoạn đường đi, fallback theo la bàn điện thoại hoặc mặc định
+      if (headingRad === null) {
+        headingRad = deviceHeading !== null ? THREE.MathUtils.degToRad(deviceHeading) : 0;
       }
 
       const forwardX = Math.sin(headingRad);
       const forwardZ = Math.cos(headingRad);
 
       const targetPos = new THREE.Vector3(
-        focusCenter.x + forwardX * 3,
+        focusCenter.x + forwardX * 4,
         0,
-        focusCenter.z + forwardZ * 3
+        focusCenter.z + forwardZ * 4
       );
       controls.target.lerp(targetPos, 0.08);
 
-      const baseDistance = 8;
-      const baseHeight = 14;
+      const baseDistance = 9;
+      const baseHeight = 12;
       const zoomRatio = (baseDistance + navFollowZoomOffset) / baseDistance;
       const camDistBack = Math.max(baseDistance + navFollowZoomOffset, 3);
       const camDistHeight = Math.max(baseHeight * zoomRatio, 5);
@@ -169,7 +172,7 @@ function NavigationCameraController({
         camDistHeight,
         focusCenter.z - forwardZ * camDistBack
       );
-      camera.position.lerp(desiredCamPos, 0.06);
+      camera.position.lerp(desiredCamPos, 0.08);
     } else {
       // Khi đang chỉ đường tổng quan (chưa có bước đi thực tế hoặc nhìn tổng quan tuyến đường)
       if (isNavigating.current && navBounds) {

@@ -136,7 +136,7 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
         <Html
           position={labelPosition}
           center
-          distanceFactor={38}
+          distanceFactor={44}
           zIndexRange={[1, 50]}
           style={{ pointerEvents: 'none' }}
         >
@@ -145,10 +145,10 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: isDestination ? '6px 14px' : isSelected ? '5px 12px' : hovered ? '4px 10px' : '3px 8px',
-              borderRadius: 20,
-              fontSize: isDestination ? 12.5 : isSelected ? 12 : 11,
-              fontWeight: 800,
+              padding: isDestination ? '5px 12px' : isSelected ? '4px 10px' : hovered ? '3px 8px' : '2px 7px',
+              borderRadius: 16,
+              fontSize: isDestination ? 11.5 : isSelected ? 11 : 10,
+              fontWeight: 700,
               letterSpacing: '-0.2px',
               userSelect: 'none',
               whiteSpace: 'nowrap',
@@ -158,23 +158,23 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
                 ? '#0284c7'
                 : hovered
                 ? '#0f172a'
-                : 'rgba(255, 255, 255, 0.95)',
+                : 'rgba(255, 255, 255, 0.94)',
               color: isDestination || isSelected ? '#ffffff' : hovered ? '#38bdf8' : '#0f172a',
               border: isDestination
-                ? '2px solid #ffffff'
+                ? '1.5px solid #ffffff'
                 : isSelected
-                ? '2px solid #bae6fd'
+                ? '1.5px solid #bae6fd'
                 : hovered
-                ? '1.5px solid #38bdf8'
+                ? '1px solid #38bdf8'
                 : '1px solid rgba(0, 0, 0, 0.12)',
               boxShadow: isDestination
-                ? '0 6px 22px rgba(22, 163, 74, 0.6)'
+                ? '0 4px 16px rgba(22, 163, 74, 0.45)'
                 : isSelected
-                ? '0 6px 20px rgba(2, 132, 199, 0.55)'
+                ? '0 4px 14px rgba(2, 132, 199, 0.4)'
                 : hovered
-                ? '0 6px 18px rgba(15, 23, 42, 0.35)'
-                : '0 2px 8px rgba(0, 0, 0, 0.08)',
-              transform: isDestination ? 'scale(1.18)' : isSelected ? 'scale(1.12)' : hovered ? 'scale(1.06)' : 'scale(1)',
+                ? '0 4px 12px rgba(15, 23, 42, 0.25)'
+                : '0 2px 6px rgba(0, 0, 0, 0.08)',
+              transform: isDestination ? 'scale(1.08)' : isSelected ? 'scale(1.04)' : 'scale(1)',
               transition: 'all 0.18s ease-out',
             }}
           >

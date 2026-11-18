@@ -149,6 +149,8 @@ function App() {
 
     return () => {
       stopCompass();
+      window.removeEventListener('message', handleNativeMessage);
+      document.removeEventListener('message', handleNativeMessage as EventListener);
       if (eventSource) {
         eventSource.close();
       }
@@ -234,6 +236,9 @@ function FloatingNavActions() {
   const userPosition = useMapStore((s) => s.userPosition);
   const clearNavigation = useMapStore((s) => s.clearNavigation);
   const isNavigatingActive = useMapStore((s) => s.isNavigatingActive);
+  const isSimulatingWalk = useMapStore((s) => s.isSimulatingWalk);
+  const startSimulationWalk = useMapStore((s) => s.startSimulationWalk);
+  const stopSimulationWalk = useMapStore((s) => s.stopSimulationWalk);
 
   const navInfo = useMemo(() => {
     // Chỉ hiển thị thanh xanh hướng dẫn Turn-by-Turn khi bấm "Bắt đầu" (isNavigatingActive)
@@ -339,18 +344,18 @@ function FloatingNavActions() {
       <div
         style={{
           position: 'absolute',
-          top: 'max(14px, env(safe-area-inset-top, 14px))',
+          top: 10,
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 1000000,
           width: 'calc(100% - 24px)',
           maxWidth: 420,
-          background: '#0d65d9', // Xanh Google Maps Navigation thực tế: đầm, chắc, chuẩn app bản đồ thật
-          borderRadius: 16,
+          background: '#0284c7', // Xanh Google Maps Navigation thực tế: đầm, chắc, chuẩn app bản đồ thật
+          borderRadius: 18,
           color: '#ffffff',
           overflow: 'hidden',
           border: 'none',
-          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
+          boxShadow: '0 8px 24px rgba(2, 132, 199, 0.25)',
           animation: 'slideDown 0.25s ease-out',
         }}
       >
@@ -425,12 +430,12 @@ function FloatingNavActions() {
           style={{
             width: '100%',
             maxWidth: 440,
-            background: 'rgba(15, 23, 42, 0.95)',
-            backdropFilter: 'blur(28px) saturate(190%)',
-            WebkitBackdropFilter: 'blur(28px) saturate(190%)',
+            background: 'rgba(255, 255, 255, 0.96)',
+            backdropFilter: 'blur(24px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
             borderRadius: 24,
-            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.12)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
+            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05)',
+            border: '1px solid rgba(0, 0, 0, 0.08)',
             padding: '12px 18px',
             display: 'flex',
             alignItems: 'center',
@@ -443,45 +448,81 @@ function FloatingNavActions() {
           {/* Thông tin thời gian & khoảng cách tổng */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
-              <span style={{ fontSize: 22, fontWeight: 800, color: '#22c55e', letterSpacing: '-0.5px' }}>
+              <span style={{ fontSize: 22, fontWeight: 800, color: '#16a34a', letterSpacing: '-0.5px' }}>
                 {navInfo.totalMinutes} phút
               </span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#94a3b8' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>
                 ({navInfo.totalMeters} m)
               </span>
             </div>
-            <div style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 500, marginTop: 2 }}>
-              Dự kiến đến lúc <strong style={{ color: '#f8fafc' }}>{navInfo.etaString}</strong>
+            <div style={{ fontSize: 11, color: '#64748b', fontWeight: 500, marginTop: 2 }}>
+              Dự kiến đến lúc <strong style={{ color: '#0f172a' }}>{navInfo.etaString}</strong>
             </div>
           </div>
 
-          {/* Nút Thoát hành trình chuẩn Google Maps */}
-          <button
-            type="button"
-            onClick={clearNavigation}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              background: '#ef4444',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: 20,
-              padding: '10px 18px',
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: 'pointer',
-              boxShadow: 'none',
-              transition: 'opacity 0.15s ease',
-              flexShrink: 0,
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-            <span>Thoát</span>
-          </button>
+          {/* Nút Đi Thử / Tạm dừng mô phỏng & Nút Thoát */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => {
+                if (isSimulatingWalk) {
+                  stopSimulationWalk();
+                } else {
+                  startSimulationWalk();
+                }
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                background: isSimulatingWalk ? '#eab308' : '#0284c7',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 20,
+                padding: '9px 14px',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: 'none',
+                transition: 'all 0.15s ease',
+                flexShrink: 0,
+              }}
+              title={isSimulatingWalk ? 'Dừng đi thử' : 'Chạy đi thử'}
+            >
+              <span>{isSimulatingWalk ? '⏸ Dừng' : '🚶 Đi thử'}</span>
+            </button>
+
+            {/* Nút Thoát hành trình chuẩn Google Maps */}
+            <button
+              type="button"
+              onClick={() => {
+                stopSimulationWalk();
+                clearNavigation();
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                background: '#ef4444',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 20,
+                padding: '10px 16px',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: 'none',
+                transition: 'opacity 0.15s ease',
+                flexShrink: 0,
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+              <span>Thoát</span>
+            </button>
+          </div>
         </div>
       </div>
     </>
@@ -495,49 +536,6 @@ const styles: Record<string, React.CSSProperties> = {
     height: '100vh',
     overflow: 'hidden',
     fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-  },
-  topRightControls: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    zIndex: 100,
-  },
-  controlBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    padding: '8px 14px',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: 10,
-    background: 'rgba(15,15,26,0.85)',
-    backdropFilter: 'blur(12px)',
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-  },
-  buildingToggleActive: {
-    border: '1px solid rgba(56, 189, 248, 0.6)',
-    background: 'rgba(56, 189, 248, 0.18)',
-    color: '#38bdf8',
-    boxShadow: '0 4px 20px rgba(56, 189, 248, 0.3)',
-  },
-  builderToggleActive: {
-    border: '1px solid rgba(0, 242, 254, 0.5)',
-    background: 'rgba(0, 242, 254, 0.15)',
-    color: '#00f2fe',
-    boxShadow: '0 4px 20px rgba(0, 242, 254, 0.25)',
-  },
-  adminToggleActive: {
-    border: '1px solid rgba(255,107,107,0.4)',
-    background: 'rgba(255,107,107,0.12)',
-    color: '#ff6b6b',
-    boxShadow: '0 4px 20px rgba(255,107,107,0.15)',
   },
 };
 
