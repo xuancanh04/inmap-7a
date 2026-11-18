@@ -253,7 +253,7 @@ export function HospitalWallMesh({
     return segments;
   }, [polygon, wallHeight, wallThickness, doorWidth, hasDoor, doorSide, doorSides, doorCount, doorPositions, center]);
 
-  const logoTexture = useLoader(THREE.TextureLoader, '/logo.png');
+  const logoTexture = useLoader(THREE.TextureLoader, './logo.png');
 
   const longestSolidSeg = useMemo(() => {
     let maxLen = 0;

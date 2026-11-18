@@ -914,7 +914,8 @@ export const SAMPLE_NAV_NODES: NavNode[] = [
   { id: 'n-chinh-tri', position: { x: 16.8, z: 8.6 }, floor: 1, roomId: 'room-top-5', label: 'Cửa P. Chính Trị' },
   { id: 'n-truong-ban', position: { x: 20.5, z: 8.6 }, floor: 1, roomId: 'room-truong-ban', label: 'Cửa P. Trưởng ban' },
   { id: 'n-ky-thuat', position: { x: 24.2, z: 8.6 }, floor: 1, roomId: 'room-ky-thuat', label: 'Cửa P. Kỹ thuật' },
-  { id: 'n-wc-nam', position: { x: 27.8, z: 8.6 }, floor: 1, roomId: 'room-wc-nam', label: 'Cửa WC Nam' },
+  { id: 'n-wc-nu', position: { x: 31.0, z: 5.4 }, floor: 1, roomId: 'room-wc-nu', label: 'Cửa WC Nữ' },
+  { id: 'n-wc-nam', position: { x: 31.0, z: 1.8 }, floor: 1, roomId: 'room-wc-nam', label: 'Cửa WC Nam' },
 
   { id: 'n-hanh-chinh', position: { x: 16.8, z: 9.6 }, floor: 1, roomId: 'room-hanh-chinh', label: 'Cửa P. Hành chính' },
   { id: 'n-dieu-hanh', position: { x: 25.9, z: 9.6 }, floor: 1, roomId: 'room-dieu-hanh', label: 'Cửa P. Điều hành' },
@@ -988,7 +989,8 @@ export const SAMPLE_NAV_EDGES: NavEdge[] = [
   { from: 'n-chinh-tri', to: 'c-top-right', weight: 14.2 },
   { from: 'n-truong-ban', to: 'c-top-right', weight: 10.5 },
   { from: 'n-ky-thuat', to: 'c-top-right', weight: 6.8 },
-  { from: 'n-wc-nam', to: 'c-top-right', weight: 3.2 },
+  { from: 'n-wc-nu', to: 'c-top-right', weight: 3.2 },
+  { from: 'n-wc-nam', to: 'n-wc-nu', weight: 3.6 },
 
   { from: 'n-hanh-chinh', to: 'c-top-right', weight: 14.2 },
   { from: 'n-dieu-hanh', to: 'c-top-right', weight: 5.2 },

@@ -7,6 +7,7 @@ export function MapControlBar() {
   const triggerRecenterUser = useMapStore((s) => s.triggerRecenterUser);
   const triggerZoomIn = useMapStore((s) => s.triggerZoomIn);
   const triggerZoomOut = useMapStore((s) => s.triggerZoomOut);
+  const selectedRoomId = useMapStore((s) => s.selectedRoomId);
 
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth <= 768 : false
@@ -23,6 +24,7 @@ export function MapControlBar() {
       style={{
         ...styles.container,
         ...(isMobile ? styles.containerMobile : {}),
+        ...(isMobile && selectedRoomId ? { bottom: 175 } : {}),
       }}
     >
 

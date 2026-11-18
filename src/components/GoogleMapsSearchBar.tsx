@@ -46,44 +46,53 @@ export function GoogleMapsSearchBar() {
       <div
         style={{
           position: 'absolute',
-          top: 'max(14px, env(safe-area-inset-top, 14px))',
+          top: 10,
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 99999,
           width: 'calc(100% - 24px)',
           maxWidth: 440,
-          background: 'rgba(15, 23, 42, 0.94)',
-          backdropFilter: 'blur(28px) saturate(190%)',
-          WebkitBackdropFilter: 'blur(28px) saturate(190%)',
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
           borderRadius: 20,
-          boxShadow: '0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.14)',
-          border: '1px solid rgba(255, 255, 255, 0.16)',
-          padding: '12px 14px',
+          boxShadow: '0 8px 28px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.05)',
+          border: '1px solid rgba(0, 0, 0, 0.08)',
+          padding: '8px 12px',
           display: 'flex',
           alignItems: 'center',
           gap: 12,
           animation: 'slideDown 0.2s ease-out',
         }}
       >
-        {/* Nút Back quay lại tìm kiếm */}
+        {/* Nút Back quay lại bản đồ bình thường và thoát chọn phòng */}
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             clearNavigation();
+            setSelectedRoomId(null);
           }}
-          title="Quay lại"
+          onTouchEnd={(e) => {
+            e.stopPropagation();
+            clearNavigation();
+            setSelectedRoomId(null);
+          }}
+          title="Quay lại bản đồ"
           style={{
-            width: 36,
-            height: 36,
+            width: 40,
+            height: 40,
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.1)',
+            background: '#f1f5f9',
             border: 'none',
-            color: '#f8fafc',
+            color: '#334155',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
             flexShrink: 0,
+            WebkitTapHighlightColor: 'transparent',
+            touchAction: 'manipulation',
           }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -101,17 +110,17 @@ export function GoogleMapsSearchBar() {
                 width: 10,
                 height: 10,
                 borderRadius: '50%',
-                background: '#38bdf8',
-                boxShadow: '0 0 8px #38bdf8',
+                background: '#0284c7',
+                boxShadow: '0 0 6px rgba(2, 132, 199, 0.5)',
                 flexShrink: 0,
               }}
             />
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               Vị trí của bạn
             </span>
           </div>
 
-          <div style={{ width: '100%', height: '1px', background: 'rgba(255, 255, 255, 0.08)' }} />
+          <div style={{ width: '100%', height: '1px', background: 'rgba(0, 0, 0, 0.06)' }} />
 
           {/* Tầng 2: Điểm đến */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -121,11 +130,11 @@ export function GoogleMapsSearchBar() {
                 height: 10,
                 borderRadius: '50%',
                 background: '#ef4444',
-                boxShadow: '0 0 8px #ef4444',
+                boxShadow: '0 0 6px rgba(239, 68, 68, 0.5)',
                 flexShrink: 0,
               }}
             />
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {selectedRoom?.name || 'Điểm đến đã chọn'}
             </span>
           </div>
@@ -134,25 +143,33 @@ export function GoogleMapsSearchBar() {
         {/* Nút đóng / hủy lộ trình */}
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
+            clearNavigation();
+            setSelectedRoomId(null);
+          }}
+          onTouchEnd={(e) => {
+            e.stopPropagation();
             clearNavigation();
             setSelectedRoomId(null);
           }}
           title="Đóng lộ trình"
           style={{
-            width: 32,
-            height: 32,
+            width: 36,
+            height: 36,
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.08)',
+            background: '#f1f5f9',
             border: 'none',
-            color: '#94a3b8',
+            color: '#64748b',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            fontSize: 14,
+            fontSize: 16,
             fontWeight: 700,
             flexShrink: 0,
+            WebkitTapHighlightColor: 'transparent',
+            touchAction: 'manipulation',
           }}
         >
           ✕
@@ -166,33 +183,50 @@ export function GoogleMapsSearchBar() {
       ref={containerRef}
       style={{
         position: 'absolute',
-        top: 'max(14px, env(safe-area-inset-top, 14px))',
+        top: 10,
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 99999,
-        width: 'calc(100% - 28px)',
+        width: 'calc(100% - 24px)',
         maxWidth: 480,
         display: 'flex',
         flexDirection: 'column',
-        gap: 8,
+        gap: 6,
       }}
     >
-      {/* 1 Thanh tìm kiếm duy nhất - Phong cách Google Maps hiện đại */}
+      {/* 1 Thanh tìm kiếm duy nhất - Phong cách Google Maps hiện đại sáng rõ */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 10,
-          background: 'rgba(15, 23, 42, 0.92)',
-          backdropFilter: 'blur(28px) saturate(190%)',
-          WebkitBackdropFilter: 'blur(28px) saturate(190%)',
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
           borderRadius: 24,
           padding: '8px 16px',
-          boxShadow: '0 20px 45px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.14)',
-          border: '1px solid rgba(255, 255, 255, 0.16)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.05)',
+          border: '1px solid rgba(0, 0, 0, 0.08)',
         }}
       >
-        <span style={{ fontSize: 16, color: '#38bdf8', flexShrink: 0 }}>🔍</span>
+        {/* Icon Kính Lúp Vector Google Maps cao cấp */}
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: '50%',
+            background: 'rgba(2, 132, 199, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </div>
 
         {/* Ô nhập tìm kiếm - Tự động điền tên phòng khi đã chọn */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -217,13 +251,13 @@ export function GoogleMapsSearchBar() {
                 outline: 'none',
                 fontSize: 14,
                 fontWeight: 600,
-                color: '#f8fafc',
+                color: '#0f172a',
                 background: 'transparent',
                 padding: '2px 0',
               }}
             />
           </div>
-          <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>
+          <div style={{ fontSize: 10, color: '#64748b', fontWeight: 500 }}>
             {selectedRoom ? (selectedRoom.description || 'Đã chọn vị trí tới • Lầu 1') : 'Bệnh Viện Quân Y 7A (Lầu 1)'}
           </div>
         </div>
@@ -239,12 +273,12 @@ export function GoogleMapsSearchBar() {
             }}
             title="Xóa lựa chọn"
             style={{
-              background: 'rgba(255, 255, 255, 0.1)',
+              background: '#f1f5f9',
               border: 'none',
               borderRadius: '50%',
               width: 24,
               height: 24,
-              color: '#cbd5e1',
+              color: '#64748b',
               fontSize: 12,
               cursor: 'pointer',
               display: 'flex',
@@ -261,19 +295,19 @@ export function GoogleMapsSearchBar() {
       {isOpen && (
         <div
           style={{
-            background: 'rgba(15, 23, 42, 0.96)',
-            backdropFilter: 'blur(28px) saturate(190%)',
-            WebkitBackdropFilter: 'blur(28px) saturate(190%)',
+            background: 'rgba(255, 255, 255, 0.98)',
+            backdropFilter: 'blur(24px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
             borderRadius: 20,
-            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.8)',
-            border: '1px solid rgba(255, 255, 255, 0.14)',
+            boxShadow: '0 16px 40px rgba(0, 0, 0, 0.15)',
+            border: '1px solid rgba(0, 0, 0, 0.08)',
             maxHeight: 'min(50vh, 320px)',
             overflowY: 'auto',
             padding: '6px 0',
           }}
         >
           {suggestions.length === 0 ? (
-            <div style={{ padding: '14px 18px', fontSize: 13, color: '#94a3b8', textAlign: 'center' }}>
+            <div style={{ padding: '14px 18px', fontSize: 13, color: '#64748b', textAlign: 'center' }}>
               Không tìm thấy phòng ở Lầu 1
             </div>
           ) : (
@@ -291,10 +325,10 @@ export function GoogleMapsSearchBar() {
                   gap: 12,
                   padding: '11px 16px',
                   cursor: 'pointer',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
+                  borderBottom: '1px solid rgba(0, 0, 0, 0.04)',
                   transition: 'background 0.15s',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)')}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <div
@@ -302,8 +336,8 @@ export function GoogleMapsSearchBar() {
                     width: 34,
                     height: 34,
                     borderRadius: 10,
-                    background: 'rgba(56, 189, 248, 0.15)',
-                    border: '1px solid rgba(56, 189, 248, 0.25)',
+                    background: 'rgba(2, 132, 199, 0.1)',
+                    border: '1px solid rgba(2, 132, 199, 0.2)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -314,14 +348,14 @@ export function GoogleMapsSearchBar() {
                   🏥
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {r.name}
                   </div>
-                  <div style={{ fontSize: 11, color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: 11, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {r.description || 'Khu vực khám chữa bệnh Lầu 1'}
                   </div>
                 </div>
-                <span style={{ fontSize: 12, color: '#38bdf8' }}>➔</span>
+                <span style={{ fontSize: 12, color: '#0284c7' }}>➔</span>
               </div>
             ))
           )}

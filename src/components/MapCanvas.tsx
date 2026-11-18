@@ -37,11 +37,7 @@ function NavigationCameraController({
     if (pts.length < 2 || !pts[0] || !pts[1]) return null;
 
     const start = pts[0].position;
-
-    
     const dest = pts[pts.length - 1]!.position;
-
-    // Đường đi hợp lệ từ start đến dest
 
     // Tâm đường đi thực tế giữa điểm đầu và điểm cuối
     const midX = (start.x + dest.x) / 2;
@@ -82,6 +78,7 @@ function NavigationCameraController({
     }
   }, [navBounds, floorCenter]);
 
+  const isNavigatingActive = useMapStore((s) => s.isNavigatingActive);
   const userPosition = useMapStore((s) => s.userPosition);
   const deviceHeading = useMapStore((s) => s.deviceHeading);
   const isFollowingUser = useMapStore((s) => s.isFollowingUser);
@@ -91,8 +88,11 @@ function NavigationCameraController({
     if (!controlsRef.current) return;
     const controls = controlsRef.current;
 
-    // Lấy tâm quay: chỉ dùng góc nhìn góc nhìn thứ nhất (live follow) khi có vị trí thực tế hoặc bật bám theo
-    const hasActiveUserTrack = Boolean(userPosition && (isFollowingUser || path.length >= 2));
+    // Chỉ bật chế độ bám sát góc nhìn người đi (First-person navigation track) khi:
+    // 1. Đang bấm "Bắt đầu" dẫn đường (isNavigatingActive), HOẶC
+    // 2. Người dùng chủ động bật bám theo (isFollowingUser)
+    // Khi chỉ mới bấm "Đường đi" (xem trước lộ trình), camera sẽ giữ góc nhìn tổng quan toàn tuyến (navBounds overview)
+    const hasActiveUserTrack = Boolean(userPosition && (isNavigatingActive || isFollowingUser));
     const focusCenter = hasActiveUserTrack ? userPosition : null;
 
     // Xử lý nút bấm Phóng to / Thu nhỏ
@@ -119,13 +119,11 @@ function NavigationCameraController({
       }
     }
 
-    // Khi người dùng có vị trí thực và đang di chuyển
+    // Khi người dùng có vị trí thực và đang trong chế độ dẫn đường
     if (hasActiveUserTrack && focusCenter) {
-      // Ưu tiên góc la bàn quay điện thoại thực tế (deviceHeading) nếu có
-      let headingRad = deviceHeading !== null ? THREE.MathUtils.degToRad(deviceHeading) : 0;
-
-      // Nếu không có cảm biến la bàn, fallback theo hướng của đoạn đường đi
-      if (deviceHeading === null) {
+      // Ưu tiên tính hướng đi theo đoạn đường dẫn lộ trình (Path vector) để camera luôn nhìn thẳng theo đường đi
+      let headingRad: number | null = null;
+      if (path.length >= 2) {
         const nodeMap = new Map(navNodes.map((n) => [n.id, n]));
         const waypoints = path.map((id) => nodeMap.get(id)?.position).filter(Boolean);
         let bestDist = Infinity;
@@ -142,24 +140,29 @@ function NavigationCameraController({
         if (waypoints[segIdx] && waypoints[segIdx + 1]) {
           const segDx = waypoints[segIdx + 1]!.x - waypoints[segIdx]!.x;
           const segDz = waypoints[segIdx + 1]!.z - waypoints[segIdx]!.z;
-          if (Math.hypot(segDx, segDz) > 0.1) {
+          if (Math.hypot(segDx, segDz) > 0.05) {
             headingRad = Math.atan2(segDx, segDz);
           }
         }
+      }
+
+      // Nếu không có đoạn đường đi, fallback theo la bàn điện thoại hoặc mặc định
+      if (headingRad === null) {
+        headingRad = deviceHeading !== null ? THREE.MathUtils.degToRad(deviceHeading) : 0;
       }
 
       const forwardX = Math.sin(headingRad);
       const forwardZ = Math.cos(headingRad);
 
       const targetPos = new THREE.Vector3(
-        focusCenter.x + forwardX * 3,
+        focusCenter.x + forwardX * 4,
         0,
-        focusCenter.z + forwardZ * 3
+        focusCenter.z + forwardZ * 4
       );
       controls.target.lerp(targetPos, 0.08);
 
-      const baseDistance = 8;
-      const baseHeight = 14;
+      const baseDistance = 9;
+      const baseHeight = 12;
       const zoomRatio = (baseDistance + navFollowZoomOffset) / baseDistance;
       const camDistBack = Math.max(baseDistance + navFollowZoomOffset, 3);
       const camDistHeight = Math.max(baseHeight * zoomRatio, 5);
@@ -169,7 +172,7 @@ function NavigationCameraController({
         camDistHeight,
         focusCenter.z - forwardZ * camDistBack
       );
-      camera.position.lerp(desiredCamPos, 0.06);
+      camera.position.lerp(desiredCamPos, 0.08);
     } else {
       // Khi đang chỉ đường tổng quan (chưa có bước đi thực tế hoặc nhìn tổng quan tuyến đường)
       if (isNavigating.current && navBounds) {
@@ -237,53 +240,47 @@ export function MapCanvas() {
           setIsFollowingUser(false);
         }
       }}
-      shadows
-      dpr={[1, 1.25]}
+      shadows={false}
+      dpr={1}
       camera={{
         position: [floorCenter[0] + 24, 30, floorCenter[2] + 26],
         fov: 44,
         near: 0.1,
-        far: 500,
+        far: 350,
       }}
       style={{
         width: '100%',
         height: '100%',
         touchAction: 'none',
-        background: 'radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 60%, #080d1a 100%)',
+        background: '#f8fafc',
       }}
       gl={{
         antialias: false,
         powerPreference: 'high-performance',
         precision: 'mediump',
+        depth: true,
+        stencil: false,
       }}
     >
       <Suspense fallback={null}>
-        <ambientLight intensity={0.85} color="#ffffff" />
+        <ambientLight intensity={1.15} color="#ffffff" />
         <directionalLight
           position={[35, 50, 30]}
-          intensity={1.3}
+          intensity={1.0}
           color="#ffffff"
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
-          shadow-camera-far={140}
-          shadow-camera-left={-45}
-          shadow-camera-right={45}
-          shadow-camera-top={45}
-          shadow-camera-bottom={-45}
         />
         <directionalLight
           position={[-30, 30, -25]}
-          intensity={0.5}
-          color="#38bdf8"
+          intensity={0.4}
+          color="#e0f2fe"
         />
         <directionalLight
           position={[0, -20, 0]}
-          intensity={0.15}
-          color="#94a3b8"
+          intensity={0.2}
+          color="#cbd5e1"
         />
 
-        <fog attach="fog" args={['#080d1a', 70, 150]} />
+        <fog attach="fog" args={['#f8fafc', 80, 180]} />
 
         {building3DMode ? (
           <MultiFloorBuilding
