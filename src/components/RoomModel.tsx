@@ -1,3 +1,4 @@
+import { voiceService } from '../utils/voiceGuidanceService';
 import { useMemo, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
@@ -74,8 +75,9 @@ export function RoomModel({ room, wallHeight = 2.8 }: RoomModelProps) {
     (e: { stopPropagation: () => void }) => {
       e.stopPropagation();
       setSelectedRoomId(room.id);
+      voiceService.speak(`Đã chọn ${room.name}`);
     },
-    [setSelectedRoomId, room.id]
+    [setSelectedRoomId, room.id, room.name]
   );
 
   const handlePointerOver = useCallback(

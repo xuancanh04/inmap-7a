@@ -1,3 +1,4 @@
+import { voiceService } from './utils/voiceGuidanceService';
 import { useEffect, useState, useMemo } from 'react';
 import { MapCanvas } from './components/MapCanvas';
 import { CoordHUD } from './components/CoordHUD';
@@ -21,8 +22,6 @@ function App() {
   const setNavData = useMapStore((s) => s.setNavData);
   const setBeacons = useMapStore((s) => s.setBeacons);
   const setUserPosition = useMapStore((s) => s.setUserPosition);
-  const toggleAdminMode = useMapStore((s) => s.toggleAdminMode);
-  const toggleBuilderMode = useMapStore((s) => s.toggleBuilderMode);
 
   const setDeviceHeading = useMapStore((s) => s.setDeviceHeading);
 
@@ -109,68 +108,14 @@ function App() {
     window.addEventListener('message', handleNativeMessage);
     document.addEventListener('message', handleNativeMessage as EventListener);
 
-    // Kết nối Webhook Server (SSE) để tự động nhận vị trí từ App React Native
-    let eventSource: EventSource | null = null;
-    try {
-      const serverPort = 3001;
-      const sseUrl = `http://${window.location.hostname || 'localhost'}:${serverPort}/api/events`;
-      eventSource = new EventSource(sseUrl);
-
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data && data.userPosition) {
-            // Nhận tọa độ trực tiếp từ Mobile
-            setUserPosition({ x: data.userPosition.x, z: data.userPosition.z });
-            if (typeof data.userPosition.floor === 'number') {
-              useMapStore.getState().setCurrentFloor(data.userPosition.floor);
-            }
-          } else if (data && Array.isArray(data.beacons)) {
-            // Nhận danh sách beacon quét được từ Mobile để tự tính tọa độ
-            const currentBeacons = useMapStore.getState().beacons;
-            if (currentBeacons.length > 0 && data.beacons.length > 0) {
-              const matched = currentBeacons.find((b) => b.minor === data.beacons[0]?.minor);
-              if (matched) {
-                setUserPosition(matched.position);
-              }
-            }
-          }
-        } catch {
-          // ignore
-        }
-      };
-
-      eventSource.onerror = () => {
-        // Server webhook chưa chạy hoặc ngắt kết nối
-      };
-    } catch {
-      // ignore
-    }
-
     return () => {
       stopCompass();
       window.removeEventListener('message', handleNativeMessage);
       document.removeEventListener('message', handleNativeMessage as EventListener);
-      if (eventSource) {
-        eventSource.close();
-      }
     };
   }, [setRooms, setNavData, setBeacons, setUserPosition, setDeviceHeading]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-        e.preventDefault();
-        toggleAdminMode();
-      }
-      if (e.ctrlKey && e.shiftKey && e.key === 'B') {
-        e.preventDefault();
-        toggleBuilderMode();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleAdminMode, toggleBuilderMode]);
+
 
   const [isAdminPath, setIsAdminPath] = useState(
     () => window.location.pathname.startsWith('/admin') || window.location.hash.startsWith('#admin')
@@ -239,6 +184,12 @@ function FloatingNavActions() {
   const isSimulatingWalk = useMapStore((s) => s.isSimulatingWalk);
   const startSimulationWalk = useMapStore((s) => s.startSimulationWalk);
   const stopSimulationWalk = useMapStore((s) => s.stopSimulationWalk);
+
+  const [isVoiceMuted, setIsVoiceMuted] = useState(() => voiceService.getIsMuted());
+
+  useEffect(() => {
+    return voiceService.subscribe(setIsVoiceMuted);
+  }, []);
 
   const navInfo = useMemo(() => {
     // Chỉ hiển thị thanh xanh hướng dẫn Turn-by-Turn khi bấm "Bắt đầu" (isNavigatingActive)
@@ -336,6 +287,23 @@ function FloatingNavActions() {
     };
   }, [isNavigatingActive, path, navNodes, rooms, userPosition]);
 
+  useEffect(() => {
+    if (!isNavigatingActive || !navInfo) {
+      voiceService.stop();
+      return;
+    }
+
+    if (navInfo.actionType === 'arrive') {
+      voiceService.speak(`Bạn đã đến trước cửa ${navInfo.destName}!`);
+    } else if (navInfo.meters <= 4) {
+      voiceService.speak(`Sắp tới ${navInfo.destName}`);
+    } else if (navInfo.actionType === 'right' || navInfo.actionType === 'left') {
+      voiceService.speak(navInfo.actionText);
+    } else {
+      voiceService.speak(`${navInfo.actionText}, cách ${navInfo.meters} mét`);
+    }
+  }, [isNavigatingActive, navInfo]);
+
   if (!navInfo) return null;
 
   return (
@@ -409,6 +377,30 @@ function FloatingNavActions() {
               Đến: <strong style={{ color: '#ffffff', fontWeight: 600 }}>{navInfo.destName}</strong>
             </div>
           </div>
+
+          {/* Nút Bật/Tắt Giọng Nói Chỉ Đường */}
+          <button
+            type="button"
+            onClick={() => voiceService.toggleMute()}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: '50%',
+              background: isVoiceMuted ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.22)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: 16,
+              flexShrink: 0,
+              transition: 'all 0.15s ease',
+            }}
+            title={isVoiceMuted ? 'Bật giọng nói chỉ đường' : 'Tắt tiếng chỉ đường'}
+          >
+            {isVoiceMuted ? '🔇' : '🔊'}
+          </button>
         </div>
       </div>
 
@@ -496,6 +488,7 @@ function FloatingNavActions() {
             <button
               type="button"
               onClick={() => {
+                voiceService.stop();
                 stopSimulationWalk();
                 clearNavigation();
               }}

@@ -1,3 +1,4 @@
+import { voiceService } from '../utils/voiceGuidanceService';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useMapStore } from '../store/useMapStore';
 import type { Room } from '../types';
@@ -316,6 +317,7 @@ export function GoogleMapsSearchBar() {
                 key={r.id}
                 onClick={() => {
                   setSelectedRoomId(r.id);
+                  voiceService.speak(`Đã chọn ${r.name}`);
                   setSearchText('');
                   setIsOpen(false);
                 }}

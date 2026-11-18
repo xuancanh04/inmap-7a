@@ -1,3 +1,4 @@
+import { voiceService } from '../utils/voiceGuidanceService';
 import { useMemo } from 'react';
 import { useMapStore } from '../store/useMapStore';
 
@@ -176,6 +177,7 @@ export function GoogleMapsBottomCard() {
             type="button"
             onClick={() => {
               navigateToRoom(room.id);
+              voiceService.speak(`Lộ trình đến ${room.name}. Khoảng cách ${estimatedInfo.meters} mét.`);
             }}
             style={{
               flex: 1,
@@ -207,9 +209,11 @@ export function GoogleMapsBottomCard() {
           <button
             type="button"
             onClick={() => {
+              voiceService.unlockAudio();
               setIsNavigatingActive(true);
               navigateToRoom(room.id);
               triggerRecenterUser();
+              voiceService.speak(`Bắt đầu đi thử đến ${room.name}.`);
               setTimeout(() => {
                 startSimulationWalk();
               }, 300);
@@ -241,9 +245,11 @@ export function GoogleMapsBottomCard() {
           <button
             type="button"
             onClick={() => {
+              voiceService.unlockAudio();
               setIsNavigatingActive(true);
               navigateToRoom(room.id);
               triggerRecenterUser();
+              voiceService.speak(`Bắt đầu dẫn đường đến ${room.name}. Đi thẳng.`);
             }}
             style={{
               flex: 1,
