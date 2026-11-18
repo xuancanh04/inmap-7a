@@ -1,6 +1,4 @@
 import { useMemo } from 'react';
-import * as THREE from 'three';
-import { useLoader } from '@react-three/fiber';
 import type { PolygonVertex, Point2D } from '../types';
 
 interface HospitalWallMeshProps {
@@ -253,19 +251,7 @@ export function HospitalWallMesh({
     return segments;
   }, [polygon, wallHeight, wallThickness, doorWidth, hasDoor, doorSide, doorSides, doorCount, doorPositions, center]);
 
-  const logoTexture = useLoader(THREE.TextureLoader, './logo.png');
 
-  const longestSolidSeg = useMemo(() => {
-    let maxLen = 0;
-    let bestSeg: typeof wallSegments[0] | null = null;
-    for (const seg of wallSegments) {
-      if (!seg.isHeader && seg.size[0] > maxLen) {
-        maxLen = seg.size[0];
-        bestSeg = seg;
-      }
-    }
-    return maxLen >= 3.5 ? bestSeg : null;
-  }, [wallSegments]);
 
   return (
     <group name="hospital-walls">
@@ -346,29 +332,7 @@ export function HospitalWallMesh({
         </group>
       ))}
 
-      {longestSolidSeg && (
-        <group
-          position={[
-            longestSolidSeg.center[0],
-            wallHeight * 0.65,
-            longestSolidSeg.center[2],
-          ]}
-          rotation={[0, longestSolidSeg.rotationY, 0]}
-        >
-          <mesh position={[0, 0, longestSolidSeg.size[2] / 2 + 0.02]}>
-            <boxGeometry args={[1.5, 0.65, 0.03]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.2} metalness={0.1} />
-          </mesh>
-          <mesh position={[0, 0, longestSolidSeg.size[2] / 2 + 0.038]}>
-            <planeGeometry args={[1.35, 0.52]} />
-            <meshBasicMaterial map={logoTexture} transparent side={THREE.DoubleSide} />
-          </mesh>
-          <mesh position={[0, 0, longestSolidSeg.size[2] / 2 + 0.015]}>
-            <boxGeometry args={[1.56, 0.71, 0.02]} />
-            <meshStandardMaterial color="#38bdf8" roughness={0.1} metalness={0.9} />
-          </mesh>
-        </group>
-      )}
+
     </group>
   );
 }
