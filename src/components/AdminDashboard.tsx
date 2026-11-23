@@ -20,6 +20,7 @@ export function AdminDashboard() {
   const userPosition = useMapStore((s) => s.userPosition);
   const rooms = useMapStore((s) => s.rooms);
   const updateRoom = useMapStore((s) => s.updateRoom);
+  const removeRoom = useMapStore((s) => s.removeRoom);
   const addFloor = useMapStore((s) => s.addFloor);
   const builderMode = useMapStore((s) => s.builderMode);
   const toggleBuilderMode = useMapStore((s) => s.toggleBuilderMode);
@@ -549,6 +550,27 @@ export function AdminDashboard() {
                               </button>
                               <button
                                 type="button"
+                                onClick={() => {
+                                  if (window.confirm(`Bạn có chắc chắn muốn xóa phòng "${r.name}"?`)) {
+                                    removeRoom(r.id);
+                                    setEditingRoomId(null);
+                                  }
+                                }}
+                                style={{
+                                  padding: '9px 14px',
+                                  borderRadius: 8,
+                                  background: 'rgba(239, 68, 68, 0.15)',
+                                  color: '#ef4444',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Xóa phòng
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => setEditingRoomId(null)}
                                 style={{
                                   padding: '9px 16px',
@@ -576,33 +598,58 @@ export function AdminDashboard() {
                               </div>
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingRoomId(r.id);
-                                setEditingRoomName(r.name);
-                                setEditingRoomDesc(r.description || '');
-                                setEditingDoorSide(r.doorSide || 'auto');
-                                setEditingNoWall(Boolean(r.noWall));
-                                setEditingWallColor(r.color || '#38bdf8');
-                              }}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                padding: '6px 12px',
-                                borderRadius: 10,
-                                background: 'rgba(56, 189, 248, 0.15)',
-                                color: '#38bdf8',
-                                border: '1px solid rgba(56, 189, 248, 0.3)',
-                                fontSize: 11,
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                flexShrink: 0,
-                              }}
-                            >
-                              Sửa
-                            </button>
+                            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingRoomId(r.id);
+                                  setEditingRoomName(r.name);
+                                  setEditingRoomDesc(r.description || '');
+                                  setEditingDoorSide(r.doorSide || 'auto');
+                                  setEditingNoWall(Boolean(r.noWall));
+                                  setEditingWallColor(r.color || '#38bdf8');
+                                }}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  padding: '6px 12px',
+                                  borderRadius: 10,
+                                  background: 'rgba(56, 189, 248, 0.15)',
+                                  color: '#38bdf8',
+                                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Sửa
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (window.confirm(`Bạn có chắc chắn muốn xóa phòng "${r.name}"?`)) {
+                                    removeRoom(r.id);
+                                  }
+                                }}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  padding: '6px 10px',
+                                  borderRadius: 10,
+                                  background: 'rgba(239, 68, 68, 0.12)',
+                                  color: '#ef4444',
+                                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                                title="Xóa phòng này"
+                              >
+                                Xóa
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -847,12 +894,11 @@ export function AdminDashboard() {
             {activeTab === 'scanner' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>
-                  ⚡ Giao Tiếp Phần Cứng iBeacon
+                  Giao Tiếp Phần Cứng iBeacon
                 </div>
 
                 <div style={styles.hardwareCard}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 18 }}>🔌</span>
                     <strong style={{ fontSize: 13 }}>Nạp Cấu Hình Từng Beacon Qua USB</strong>
                   </div>
                   <p style={{ fontSize: 11, color: '#94a3b8', margin: '0 0 10px' }}>
@@ -896,13 +942,12 @@ export function AdminDashboard() {
                     }}
                     style={styles.btnUsb}
                   >
-                    🔌 Cắm USB & Nạp Minor {selectedUsbMinor} Vào RAM
+                    Cắm USB & Nạp Minor {selectedUsbMinor} Vào RAM
                   </button>
                 </div>
 
                 <div style={styles.hardwareCard}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 18 }}>📶</span>
                     <strong style={{ fontSize: 13 }}>Tự Động Bắt Sóng Thực Tế (Web Bluetooth)</strong>
                   </div>
                   <p style={{ fontSize: 11, color: '#94a3b8', margin: '0 0 10px' }}>
@@ -946,7 +991,7 @@ export function AdminDashboard() {
                     }}
                     style={isBleScanning ? styles.btnBleActive : styles.btnBle}
                   >
-                    {isBleScanning ? '⏹ Dừng Quét Bluetooth' : '⚡ Bắt Đầu Quét Tự Động (Auto-Discover)'}
+                    {isBleScanning ? 'Dừng Quét Bluetooth' : 'Bắt Đầu Quét Tự Động (Auto-Discover)'}
                   </button>
 
                   {discoveredBeacons.size > 0 && (

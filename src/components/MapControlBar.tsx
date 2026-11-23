@@ -29,6 +29,8 @@ export function MapControlBar() {
     >
 
 
+      {/* Nút định vị & bám theo vị trí người dùng */}
+
       <button
         type="button"
         onClick={() => {

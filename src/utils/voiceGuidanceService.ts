@@ -87,6 +87,15 @@ class VoiceGuidanceService {
     const key = trimmed.toLowerCase();
     if (map[key]) return map[key];
 
+    // Khớp các câu chỉ hướng biến thể
+    if (key.includes('rẽ trái')) return 'audio/re_trai.mp3';
+    if (key.includes('rẽ phải')) return 'audio/re_phai.mp3';
+    if (key.includes('đi thẳng')) return 'audio/di_thang.mp3';
+    if (key.includes('đến nơi') || key.includes('đã tới') || key.includes('đến trước cửa')) return 'audio/da_den_noi.mp3';
+    if (key.startsWith('bắt đầu dẫn đường') || key.startsWith('bắt đầu chỉ đường')) return 'audio/bat_dau_chi_duong.mp3';
+    if (key.startsWith('bắt đầu đi thử')) return 'audio/bat_dau_di_thu.mp3';
+    if (key.includes('lộ trình đến')) return 'audio/bat_dau_chi_duong.mp3';
+
     // Kiểm tra mẫu "Đã chọn [Tên phòng]"
     if (trimmed.startsWith('Đã chọn ') || trimmed.startsWith('đã chọn ')) {
       const roomPart = trimmed.substring(8).trim();
