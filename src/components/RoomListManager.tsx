@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useMapStore } from '../store/useMapStore';
 import { calculatePolygonCentroid, calculatePolygonArea } from '../utils/geometry';
 import type { Room } from '../types';
@@ -15,6 +15,7 @@ export function RoomListManager() {
   const rooms = useMapStore((s) => s.rooms);
   const currentFloor = useMapStore((s) => s.currentFloor);
   const addRoom = useMapStore((s) => s.addRoom);
+  const updateRoom = useMapStore((s) => s.updateRoom);
   const removeRoom = useMapStore((s) => s.removeRoom);
   const builderPoints = useMapStore((s) => s.builderPoints);
   const clearBuilderPoints = useMapStore((s) => s.clearBuilderPoints);
@@ -22,11 +23,52 @@ export function RoomListManager() {
   const builderMode = useMapStore((s) => s.builderMode);
   const toggleBuilderMode = useMapStore((s) => s.toggleBuilderMode);
 
+  // Chế độ chỉnh sửa phòng hiện có
+  const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
+
   const [roomName, setRoomName] = useState('');
+  const [roomDesc, setRoomDesc] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<typeof FUNCTION_GROUPS[number]['id']>('medical');
   const [doorSideChoice, setDoorSideChoice] = useState<'auto' | 'north' | 'south' | 'east' | 'west' | 'none'>('auto');
   const [filterSearch, setFilterSearch] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Quản lý kéo thả tự do vị trí (Draggable Modal)
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [hasMoved, setHasMoved] = useState(false);
+  const isDraggingRef = useRef(false);
+  const dragStartOffset = useRef({ x: 0, y: 0 });
+
+  const handlePointerDownHeader = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Không drag nếu click vào nút bấm trên header
+    if ((e.target as HTMLElement).tagName.toLowerCase() === 'button') return;
+    isDraggingRef.current = true;
+    setHasMoved(true);
+    const rect = (e.currentTarget.parentElement as HTMLElement)?.getBoundingClientRect();
+    dragStartOffset.current = {
+      x: e.clientX - (rect?.left ?? pos.x),
+      y: e.clientY - (rect?.top ?? pos.y),
+    };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    const newX = Math.max(10, Math.min(window.innerWidth - 360, e.clientX - dragStartOffset.current.x));
+    const newY = Math.max(10, Math.min(window.innerHeight - 100, e.clientY - dragStartOffset.current.y));
+    setPos({ x: newX, y: newY });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      try {
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {
+        // Ignore
+      }
+    }
+  };
 
   const currentColor = useMemo(() => {
     return FUNCTION_GROUPS.find((g) => g.id === selectedGroup)?.color || '#3B82F6';
@@ -40,7 +82,27 @@ export function RoomListManager() {
     return calculatePolygonArea(builderPoints);
   }, [builderPoints]);
 
-  const handleCreateRoom = useCallback(() => {
+  const handleSaveRoom = useCallback(() => {
+    // Nếu đang chỉnh sửa phòng đã có
+    if (editingRoomId) {
+      if (!roomName.trim()) {
+        alert('Vui lòng nhập tên phòng!');
+        return;
+      }
+      updateRoom(editingRoomId, {
+        name: roomName.trim(),
+        description: roomDesc.trim() || undefined,
+        type: selectedGroup as Room['type'],
+        color: currentColor,
+        doorSide: doorSideChoice,
+      });
+      setEditingRoomId(null);
+      setRoomName('');
+      setRoomDesc('');
+      return;
+    }
+
+    // Nếu đang tạo phòng mới từ các điểm chấm trên sàn 3D
     if (builderPoints.length < 3) {
       alert('Vui lòng click ít nhất 3 hoặc 4 điểm góc trên bản vẽ để tạo phòng!');
       return;
@@ -58,53 +120,44 @@ export function RoomListManager() {
       color: currentColor,
       type: selectedGroup as Room['type'],
       doorSide: doorSideChoice,
-      description: `Phòng ${name} - Tầng ${currentFloor}`,
+      description: roomDesc.trim() || `Phòng ${name} - Tầng ${currentFloor}`,
     };
 
     addRoom(newRoom);
     clearBuilderPoints();
     setRoomName('');
+    setRoomDesc('');
   }, [
-    builderPoints,
+    editingRoomId,
     roomName,
+    roomDesc,
+    selectedGroup,
+    currentColor,
+    doorSideChoice,
+    updateRoom,
+    builderPoints,
     currentFloor,
     rooms.length,
-    currentColor,
-    selectedGroup,
     addRoom,
     clearBuilderPoints,
-    doorSideChoice,
   ]);
 
-  const handleExportJSON = useCallback(() => {
-    const exportData = {
-      hospital: 'Bệnh viện Quân y 7A',
-      exportDate: new Date().toISOString(),
-      floor: currentFloor,
-      totalRooms: rooms.length,
-      rooms: rooms.map((r) => ({
-        id: r.id,
-        name: r.name,
-        floor: r.floor,
-        type: r.type,
-        color: r.color,
-        center: r.center,
-        polygon: r.polygon,
-        description: r.description,
-      })),
-    };
+  const startEditRoom = (r: Room) => {
+    setEditingRoomId(r.id);
+    setRoomName(r.name);
+    setRoomDesc(r.description || '');
+    if (r.type && FUNCTION_GROUPS.some((g) => g.id === r.type)) {
+      setSelectedGroup(r.type as typeof selectedGroup);
+    }
+    setDoorSideChoice(r.doorSide || 'auto');
+    setIsCollapsed(false);
+  };
 
-    const jsonString = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `InMap7A_Floor_${currentFloor}_Rooms.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [rooms, currentFloor]);
+  const cancelEdit = () => {
+    setEditingRoomId(null);
+    setRoomName('');
+    setRoomDesc('');
+  };
 
   const filteredRooms = useMemo(() => {
     return rooms
@@ -115,26 +168,46 @@ export function RoomListManager() {
   if (!builderMode) return null;
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
+    <div
+      style={{
+        ...styles.container,
+        ...(hasMoved
+          ? { left: pos.x, top: pos.y, right: 'auto' }
+          : { right: 20, top: 76, left: 'auto' }),
+      }}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+    >
+      {/* Header kéo thả tiện lợi */}
+      <div
+        style={styles.header}
+        onPointerDown={handlePointerDownHeader}
+      >
         <div style={styles.headerTitleRow}>
+          <span style={styles.dragHandle} title="Kéo giữ để di chuyển bảng">⋮⋮</span>
           <div>
-            <div style={styles.headerTitle}>Quản lý tạo phòng 3D (Tầng {currentFloor})</div>
-            <div style={styles.headerSubtitle}>Tự động dựng tường & đục cửa từ tọa độ bản vẽ</div>
+            <div style={styles.headerTitle}>
+              {editingRoomId ? 'Chỉnh sửa phòng 3D' : `Quản lý tạo phòng 3D (Tầng ${currentFloor})`}
+            </div>
+            <div style={styles.headerSubtitle}>
+              {editingRoomId ? 'Sửa tên & thuộc tính phòng' : 'Click sàn 3D để chấm góc & dựng tường'}
+            </div>
           </div>
         </div>
         <div style={styles.headerActions}>
           <button
+            type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
             style={styles.btnIcon}
-            title={isCollapsed ? 'Mở rộng' : 'Thu gọn'}
+            title={isCollapsed ? 'Mở rộng bảng' : 'Thu nhỏ bảng'}
           >
             {isCollapsed ? '▾' : '▴'}
           </button>
           <button
+            type="button"
             onClick={toggleBuilderMode}
             style={styles.btnIcon}
-            title="Đóng bảng quản lý"
+            title="Đóng bảng công cụ"
           >
             ✕
           </button>
@@ -142,21 +215,21 @@ export function RoomListManager() {
       </div>
 
       {!isCollapsed && (
-        <>
+        <div style={styles.contentBody}>
           <div style={styles.section}>
             <div style={styles.sectionHeader}>
-              <span style={styles.sectionTitle}>1. Tạo khối phòng mới</span>
-              <span style={styles.pointsBadge}>
-                {builderPoints.length} điểm đã chọn
+              <span style={styles.sectionTitle}>
+                {editingRoomId ? '1. Thông tin chỉnh sửa' : '1. Tạo khối phòng mới'}
               </span>
+              {!editingRoomId && (
+                <span style={styles.pointsBadge}>
+                  {builderPoints.length} điểm đã chọn
+                </span>
+              )}
             </div>
 
-            <div style={styles.pointsStatus}>
-              {builderPoints.length === 0 ? (
-                <div style={styles.pointsHint}>
-                  Click các góc phòng trên sàn 3D để tạo đa giác (tối thiểu 3 điểm).
-                </div>
-              ) : (
+            {!editingRoomId && builderPoints.length > 0 && (
+              <div style={styles.pointsStatus}>
                 <div style={styles.pointsList}>
                   <div style={styles.centroidInfo}>
                     Tọa độ tâm: ({currentCentroid.x}, {currentCentroid.z})
@@ -170,16 +243,16 @@ export function RoomListManager() {
                     ))}
                   </div>
                   <div style={styles.btnRowMini}>
-                    <button onClick={popBuilderPoint} style={styles.btnMini}>
+                    <button type="button" onClick={popBuilderPoint} style={styles.btnMini}>
                       Xóa điểm cuối
                     </button>
-                    <button onClick={clearBuilderPoints} style={styles.btnMiniDanger}>
+                    <button type="button" onClick={clearBuilderPoints} style={styles.btnMiniDanger}>
                       Xóa tất cả
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             <div style={styles.inputGroup}>
               <label style={styles.label}>Tên phòng</label>
@@ -188,6 +261,17 @@ export function RoomListManager() {
                 placeholder="VD: Phòng Hành chính, Cấp cứu..."
                 value={roomName}
                 onChange={(e) => setRoomName(e.target.value)}
+                style={styles.textInput}
+              />
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Mô tả / Khoa phụ trách</label>
+              <input
+                type="text"
+                placeholder="VD: Khám tổng quát & tư vấn điều trị"
+                value={roomDesc}
+                onChange={(e) => setRoomDesc(e.target.value)}
                 style={styles.textInput}
               />
             </div>
@@ -223,16 +307,44 @@ export function RoomListManager() {
               </select>
             </div>
 
-            <button
-              onClick={handleCreateRoom}
-              disabled={builderPoints.length < 3}
-              style={{
-                ...styles.btnPrimary,
-                ...(builderPoints.length < 3 ? styles.btnDisabled : {}),
-              }}
-            >
-              Tạo phòng & Dựng tường 3D
-            </button>
+            <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+              {editingRoomId && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm('Bạn có chắc chắn muốn xóa vĩnh viễn phòng này?')) {
+                        removeRoom(editingRoomId);
+                        cancelEdit();
+                      }
+                    }}
+                    style={styles.btnDeleteEditing}
+                    title="Xóa vĩnh viễn phòng này"
+                  >
+                    Xóa phòng
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    style={styles.btnCancelEdit}
+                  >
+                    Hủy
+                  </button>
+                </>
+              )}
+
+              <button
+                type="button"
+                onClick={handleSaveRoom}
+                disabled={!editingRoomId && builderPoints.length < 3}
+                style={{
+                  ...styles.btnPrimary,
+                  ...((!editingRoomId && builderPoints.length < 3) ? styles.btnDisabled : {}),
+                }}
+              >
+                {editingRoomId ? 'Lưu thay đổi' : 'Tạo phòng & Dựng tường 3D'}
+              </button>
+            </div>
           </div>
 
           <div style={styles.section}>
@@ -240,14 +352,11 @@ export function RoomListManager() {
               <span style={styles.sectionTitle}>
                 2. Danh sách phòng ({filteredRooms.length})
               </span>
-              <button onClick={handleExportJSON} style={styles.btnExport} title="Tải file JSON">
-                Xuất JSON
-              </button>
             </div>
 
             <input
               type="text"
-              placeholder="Tìm nhanh tên phòng..."
+              placeholder="🔍 Tìm nhanh tên phòng..."
               value={filterSearch}
               onChange={(e) => setFilterSearch(e.target.value)}
               style={styles.searchBar}
@@ -258,28 +367,50 @@ export function RoomListManager() {
                 <div style={styles.emptyText}>Chưa có phòng nào trên tầng {currentFloor}.</div>
               ) : (
                 filteredRooms.map((r) => (
-                  <div key={r.id} style={styles.roomCard}>
+                  <div key={r.id} style={{
+                    ...styles.roomCard,
+                    borderColor: editingRoomId === r.id ? '#38bdf8' : 'rgba(255,255,255,0.05)',
+                    background: editingRoomId === r.id ? 'rgba(56, 189, 248, 0.12)' : 'rgba(255,255,255,0.03)',
+                  }}>
                     <div style={styles.roomCardLeft}>
-                      <div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={styles.roomCardName}>{r.name}</div>
                         <div style={styles.roomCardDetails}>
-                          Tâm: ({r.center.x}, {r.center.z}) • {r.polygon.length} góc
+                          Tâm: ({r.center.x}, {r.center.z})
                         </div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => removeRoom(r.id)}
-                      style={styles.btnDelete}
-                      title="Xóa phòng này"
-                    >
-                      ✕
-                    </button>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => startEditRoom(r)}
+                        style={styles.btnEdit}
+                        title="Chỉnh sửa tên & thông tin phòng"
+                      >
+                        Sửa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`Bạn có chắc chắn muốn xóa phòng "${r.name}"?`)) {
+                            removeRoom(r.id);
+                            if (editingRoomId === r.id) {
+                              cancelEdit();
+                            }
+                          }
+                        }}
+                        style={styles.btnDelete}
+                        title="Xóa phòng này"
+                      >
+                        Xóa
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -287,47 +418,54 @@ export function RoomListManager() {
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    position: 'absolute',
-    top: 70,
-    right: 16,
-    width: 360,
+    position: 'fixed',
+    right: 20,
+    top: 76,
+    width: 350,
     maxHeight: 'calc(100vh - 90px)',
     background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.94) 100%)',
     backdropFilter: 'blur(20px)',
     borderRadius: 16,
-    border: '1px solid rgba(56, 189, 248, 0.3)',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.6), 0 0 35px rgba(56, 189, 248, 0.15)',
+    border: '1px solid rgba(56, 189, 248, 0.35)',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.6), 0 0 35px rgba(56, 189, 248, 0.2)',
     color: '#f8fafc',
-    zIndex: 100,
+    zIndex: 999999,
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
     fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+    userSelect: 'none',
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '12px 16px',
+    padding: '12px 14px',
     borderBottom: '1px solid rgba(255,255,255,0.08)',
-    background: 'rgba(0,0,0,0.2)',
+    background: 'rgba(0,0,0,0.3)',
+    cursor: 'move',
+    touchAction: 'none',
+  },
+  dragHandle: {
+    fontSize: 16,
+    color: '#38bdf8',
+    cursor: 'grab',
+    paddingRight: 4,
+    opacity: 0.8,
   },
   headerTitleRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: 10,
-  },
-  headerIcon: {
-    fontSize: 22,
+    gap: 8,
   },
   headerTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 700,
     color: '#38bdf8',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   headerSubtitle: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#94a3b8',
     marginTop: 1,
   },
@@ -336,15 +474,24 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 4,
   },
   btnIcon: {
-    background: 'none',
-    border: 'none',
-    color: '#94a3b8',
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 6,
+    color: '#cbd5e1',
     cursor: 'pointer',
-    fontSize: 14,
-    padding: '4px 6px',
+    fontSize: 13,
+    width: 26,
+    height: 26,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contentBody: {
+    overflowY: 'auto',
+    maxHeight: 'calc(100vh - 150px)',
   },
   section: {
-    padding: '12px 16px',
+    padding: '12px 14px',
     borderBottom: '1px solid rgba(255,255,255,0.06)',
   },
   sectionHeader: {
@@ -354,7 +501,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 700,
     color: '#cbd5e1',
     textTransform: 'uppercase',
@@ -440,7 +587,7 @@ const styles: Record<string, React.CSSProperties> = {
   textInput: {
     width: '100%',
     padding: '7px 10px',
-    background: 'rgba(0,0,0,0.3)',
+    background: 'rgba(0,0,0,0.35)',
     border: '1px solid rgba(255,255,255,0.15)',
     borderRadius: 8,
     color: '#ffffff',
@@ -460,8 +607,7 @@ const styles: Record<string, React.CSSProperties> = {
     boxSizing: 'border-box',
   },
   btnPrimary: {
-    width: '100%',
-    marginTop: 4,
+    flex: 1,
     padding: '9px 12px',
     background: 'linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%)',
     border: 'none',
@@ -472,6 +618,27 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     boxShadow: '0 4px 15px rgba(14, 165, 233, 0.35)',
     transition: 'all 0.2s ease',
+  },
+  btnDeleteEditing: {
+    padding: '9px 12px',
+    background: 'rgba(239, 68, 68, 0.18)',
+    border: '1px solid rgba(239, 68, 68, 0.4)',
+    borderRadius: 8,
+    color: '#ef4444',
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  btnCancelEdit: {
+    padding: '9px 12px',
+    background: 'rgba(255, 255, 255, 0.1)',
+    border: '1px solid rgba(255, 255, 255, 0.15)',
+    borderRadius: 8,
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: 'pointer',
   },
   btnDisabled: {
     opacity: 0.4,
@@ -494,8 +661,8 @@ const styles: Record<string, React.CSSProperties> = {
   searchBar: {
     width: '100%',
     padding: '6px 10px',
-    background: 'rgba(0,0,0,0.2)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'rgba(0,0,0,0.25)',
+    border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: 6,
     color: '#ffffff',
     fontSize: 11,
@@ -521,37 +688,49 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '6px 8px',
-    background: 'rgba(255,255,255,0.03)',
     borderRadius: 6,
     border: '1px solid rgba(255,255,255,0.05)',
+    transition: 'all 0.15s ease',
   },
   roomCardLeft: {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-  },
-  colorDot: {
-    width: 10,
-    height: 10,
-    borderRadius: '50%',
-    flexShrink: 0,
+    flex: 1,
+    minWidth: 0,
   },
   roomCardName: {
     fontSize: 12,
     fontWeight: 600,
     color: '#e2e8f0',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   },
   roomCardDetails: {
     fontSize: 10,
     color: '#94a3b8',
   },
+  btnEdit: {
+    background: 'rgba(56, 189, 248, 0.15)',
+    border: '1px solid rgba(56, 189, 248, 0.3)',
+    color: '#38bdf8',
+    cursor: 'pointer',
+    padding: '2px 8px',
+    borderRadius: 4,
+    fontSize: 11,
+    fontWeight: 600,
+  },
   btnDelete: {
-    background: 'none',
-    border: 'none',
+    background: 'rgba(239, 68, 68, 0.12)',
+    border: '1px solid rgba(239, 68, 68, 0.25)',
     color: '#ef4444',
     cursor: 'pointer',
-    padding: '2px 6px',
-    fontSize: 12,
+    padding: '2px 8px',
+    borderRadius: 4,
+    fontSize: 11,
+    fontWeight: 600,
+    transition: 'all 0.15s ease',
   },
 };
 

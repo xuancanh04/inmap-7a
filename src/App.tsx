@@ -2,7 +2,6 @@ import { voiceService } from './utils/voiceGuidanceService';
 import { useEffect, useState, useMemo } from 'react';
 import { MapCanvas } from './components/MapCanvas';
 import { CoordHUD } from './components/CoordHUD';
-import { RoomListManager } from './components/RoomListManager';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AdminLogin } from './components/AdminLogin';
 import { MapControlBar } from './components/MapControlBar';
@@ -164,8 +163,6 @@ function App() {
 
       
       <CoordHUD />
-
-      <RoomListManager />
 
       <FloatingNavActions />
 

@@ -47,6 +47,8 @@ export interface MapStoreState {
   builderPoints: Point2D[];
 
   building3DMode: boolean;
+  showRoof: boolean;
+  toggleShowRoof: () => void;
 
   setCurrentFloor: (floor: number) => void;
   addFloor: (floor: Floor) => void;
@@ -79,6 +81,9 @@ export interface MapStoreState {
 
   toggleBuilderMode: () => void;
   addBuilderPoint: (point: Point2D) => void;
+  updateBuilderPoint: (index: number, point: Point2D) => void;
+  removeBuilderPoint: (index: number) => void;
+  setBuilderPoints: (points: Point2D[]) => void;
   popBuilderPoint: () => void;
   clearBuilderPoints: () => void;
 }
@@ -124,6 +129,8 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
   builderMode: false,
   builderPoints: [],
   building3DMode: false,
+  showRoof: true,
+  toggleShowRoof: () => set((state) => ({ showRoof: !state.showRoof })),
 
   setCurrentFloor: (floor) => set({ currentFloor: floor }),
   addFloor: (floor) =>
@@ -420,6 +427,18 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
     set((state) => ({
       builderPoints: [...state.builderPoints, point],
     })),
+
+  updateBuilderPoint: (index, point) =>
+    set((state) => ({
+      builderPoints: state.builderPoints.map((p, i) => (i === index ? point : p)),
+    })),
+
+  removeBuilderPoint: (index) =>
+    set((state) => ({
+      builderPoints: state.builderPoints.filter((_, i) => i !== index),
+    })),
+
+  setBuilderPoints: (points) => set({ builderPoints: points }),
 
   popBuilderPoint: () =>
     set((state) => ({
