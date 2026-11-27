@@ -1,6 +1,7 @@
 import { voiceService } from '../utils/voiceGuidanceService';
 import { useMemo } from 'react';
 import { useMapStore } from '../store/useMapStore';
+import { summarizeRouteInstructions } from '../utils/pathfinding';
 
 export function GoogleMapsBottomCard() {
   const selectedRoomId = useMapStore((s) => s.selectedRoomId);
@@ -213,10 +214,12 @@ export function GoogleMapsBottomCard() {
               setIsNavigatingActive(true);
               navigateToRoom(room.id);
               triggerRecenterUser();
-              voiceService.speak(`Bắt đầu đi thử đến ${room.name}.`);
               setTimeout(() => {
+                const state = useMapStore.getState();
+                const speech = summarizeRouteInstructions(state.navigation.path, state.navNodes, room.name);
+                voiceService.speak(speech || `Bắt đầu đi thử đến ${room.name}.`, true);
                 startSimulationWalk();
-              }, 300);
+              }, 400);
             }}
             style={{
               flex: 1,
@@ -249,7 +252,11 @@ export function GoogleMapsBottomCard() {
               setIsNavigatingActive(true);
               navigateToRoom(room.id);
               triggerRecenterUser();
-              voiceService.speak(`Bắt đầu dẫn đường đến ${room.name}. Đi thẳng.`);
+              setTimeout(() => {
+                const state = useMapStore.getState();
+                const speech = summarizeRouteInstructions(state.navigation.path, state.navNodes, room.name);
+                voiceService.speak(speech || `Bắt đầu dẫn đường đến ${room.name}.`, true);
+              }, 400);
             }}
             style={{
               flex: 1,

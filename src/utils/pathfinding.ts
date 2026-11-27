@@ -102,6 +102,77 @@ class MinHeap {
   }
 }
 
+export function summarizeRouteInstructions(
+  path: string[],
+  nodes: NavNode[],
+  roomName?: string
+): string {
+  if (path.length < 2) return '';
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+
+  interface RouteSegment {
+    meters: number;
+    turn: 'straight' | 'left' | 'right';
+  }
+
+  const segments: RouteSegment[] = [];
+  let currentSegmentMeters = 0;
+
+  for (let i = 0; i < path.length - 1; i++) {
+    const p1 = nodeMap.get(path[i])?.position;
+    const p2 = nodeMap.get(path[i + 1])?.position;
+    if (!p1 || !p2) continue;
+
+    const segmentDist = Math.hypot(p2.x - p1.x, p2.z - p1.z) * 1.2;
+    currentSegmentMeters += segmentDist;
+
+    // Kiểm tra góc rẽ tại node i+1 (nếu có node i+2)
+    if (i < path.length - 2) {
+      const p3 = nodeMap.get(path[i + 2])?.position;
+      if (p3) {
+        const v1x = p2.x - p1.x;
+        const v1z = p2.z - p1.z;
+        const v2x = p3.x - p2.x;
+        const v2z = p3.z - p2.z;
+        const cross = v1x * v2z - v1z * v2x;
+
+        // Nếu rẽ góc đáng kể (> 0.8 hoặc < -0.8)
+        if (cross > 0.8 || cross < -0.8) {
+          segments.push({
+            meters: Math.max(2, Math.round(currentSegmentMeters)),
+            turn: cross > 0 ? 'right' : 'left',
+          });
+          currentSegmentMeters = 0;
+        }
+      }
+    }
+  }
+
+  // Đoạn cuối cùng đi vào phòng
+  if (currentSegmentMeters > 0) {
+    segments.push({
+      meters: Math.max(2, Math.round(currentSegmentMeters)),
+      turn: 'straight',
+    });
+  }
+
+  if (segments.length === 0) return '';
+
+  const parts: string[] = [];
+  // Đoạn 1
+  parts.push(`Đi thẳng ${segments[0].meters} mét`);
+
+  // Các đoạn tiếp theo
+  for (let j = 0; j < segments.length - 1; j++) {
+    const turnText = segments[j].turn === 'left' ? 'rẽ trái' : 'rẽ phải';
+    const nextMeters = segments[j + 1].meters;
+    parts.push(`rồi ${turnText} ${nextMeters} mét`);
+  }
+
+  const targetSuffix = roomName ? ` để tới ${roomName}.` : ' để đến nơi.';
+  return `Bắt đầu dẫn đường: ${parts.join(', ')}${targetSuffix}`;
+}
+
 export function findShortestPath(
   startId: string,
   goalId: string,

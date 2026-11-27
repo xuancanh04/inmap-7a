@@ -10,10 +10,16 @@ export function GoogleMapsSearchBar() {
   const path = useMapStore((s) => s.navigation.path);
   const clearNavigation = useMapStore((s) => s.clearNavigation);
   const isNavigatingActive = useMapStore((s) => s.isNavigatingActive);
+  const currentFloor = useMapStore((s) => s.currentFloor);
 
-  // Chỉ lấy danh sách các phòng ở Lầu 1
-  const floor1Rooms = useMemo(() => rooms.filter((r) => r.floor === 1), [rooms]);
+  // Lấy danh sách các phòng theo tầng hiện đang chọn
+  const currentFloorRooms = useMemo(() => rooms.filter((r) => r.floor === currentFloor), [rooms, currentFloor]);
   const selectedRoom = useMemo(() => rooms.find((r) => r.id === selectedRoomId), [rooms, selectedRoomId]);
+
+  const floorLabel = useMemo(() => {
+    if (currentFloor === 0) return 'Tầng trệt';
+    return `Lầu ${currentFloor}`;
+  }, [currentFloor]);
 
   const [searchText, setSearchText] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -30,12 +36,12 @@ export function GoogleMapsSearchBar() {
   }, []);
 
   const suggestions = useMemo(() => {
-    if (!searchText.trim()) return floor1Rooms;
+    if (!searchText.trim()) return currentFloorRooms;
     const q = searchText.toLowerCase();
-    return floor1Rooms.filter(
+    return currentFloorRooms.filter(
       (r) => r.name.toLowerCase().includes(q) || r.description?.toLowerCase().includes(q)
     );
-  }, [floor1Rooms, searchText]);
+  }, [currentFloorRooms, searchText]);
 
   // Nếu đang trong chế độ dẫn đường trực tiếp (Bắt đầu) thì ẩn thanh tìm kiếm
   if (isNavigatingActive) return null;
@@ -259,7 +265,7 @@ export function GoogleMapsSearchBar() {
             />
           </div>
           <div style={{ fontSize: 10, color: '#64748b', fontWeight: 500 }}>
-            {selectedRoom ? (selectedRoom.description || 'Đã chọn vị trí tới • Lầu 1') : 'Bệnh Viện Quân Y 7A (Lầu 1)'}
+            {selectedRoom ? (selectedRoom.description || `Đã chọn vị trí tới • ${floorLabel}`) : `Bệnh Viện Quân Y 7A (${floorLabel})`}
           </div>
         </div>
 

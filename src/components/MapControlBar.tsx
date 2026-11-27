@@ -8,6 +8,8 @@ export function MapControlBar() {
   const triggerZoomIn = useMapStore((s) => s.triggerZoomIn);
   const triggerZoomOut = useMapStore((s) => s.triggerZoomOut);
   const selectedRoomId = useMapStore((s) => s.selectedRoomId);
+  const currentFloor = useMapStore((s) => s.currentFloor);
+  const setCurrentFloor = useMapStore((s) => s.setCurrentFloor);
 
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth <= 768 : false
@@ -19,19 +21,58 @@ export function MapControlBar() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Các tầng hiển thị nhỏ gọn: L2, L1, G
+  const availableFloors = [
+    { id: 2, label: 'L2', title: 'Lầu 2' },
+    { id: 1, label: 'L1', title: 'Lầu 1' },
+    { id: 0, label: 'G', title: 'Tầng trệt' },
+  ];
+
   return (
-    <div
-      style={{
-        ...styles.container,
-        ...(isMobile ? styles.containerMobile : {}),
-        ...(isMobile && selectedRoomId ? { bottom: 175 } : {}),
-      }}
-    >
+    <>
+      {/* Cụm nút chọn tầng bên cạnh trái màn hình chuẩn Google Maps */}
+      <div
+        style={{
+          ...styles.floorContainer,
+          ...(isMobile ? styles.floorContainerMobile : {}),
+        }}
+      >
+        <div style={styles.floorGroup}>
+          {availableFloors.map((fl, idx) => {
+            const isActive = currentFloor === fl.id;
+            return (
+              <React.Fragment key={fl.id}>
+                {idx > 0 && <div style={styles.divider} />}
+                <button
+                  type="button"
+                  onClick={() => setCurrentFloor(fl.id)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  title={fl.title}
+                  style={{
+                    ...styles.floorBtn,
+                    backgroundColor: isActive ? '#0284c7' : '#ffffff',
+                    color: isActive ? '#ffffff' : '#334155',
+                    fontWeight: isActive ? 800 : 600,
+                  }}
+                >
+                  {fl.label}
+                </button>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
 
-
-      {/* Nút định vị & bám theo vị trí người dùng */}
-
-      <button
+      {/* Cụm nút điều khiển bản đồ ở cạnh phải (Định vị, Phóng to/Thu nhỏ) */}
+      <div
+        style={{
+          ...styles.container,
+          ...(isMobile ? styles.containerMobile : {}),
+          ...(isMobile && selectedRoomId ? { bottom: 175 } : {}),
+        }}
+      >
+        {/* Nút định vị & bám theo vị trí người dùng */}
+        <button
         type="button"
         onClick={() => {
           if (isFollowingUser) {
@@ -86,10 +127,24 @@ export function MapControlBar() {
         </button>
       </div>
     </div>
-  );
+  </>
+);
 }
 
 const styles: Record<string, React.CSSProperties> = {
+  floorContainer: {
+    position: 'absolute',
+    left: 18,
+    top: '50%',
+    transform: 'translateY(-50%)',
+    zIndex: 900,
+  },
+  floorContainerMobile: {
+    left: 14,
+    top: '45%',
+    transform: 'translateY(-50%)',
+    zIndex: 9999,
+  },
   container: {
     position: 'absolute',
     right: 18,
@@ -139,6 +194,26 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid rgba(0, 0, 0, 0.1)',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
     overflow: 'hidden',
+  },
+  floorGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    border: '1px solid rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    overflow: 'hidden',
+  },
+  floorBtn: {
+    width: 44,
+    height: 36,
+    border: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 12,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
   zoomBtnTop: {
     width: 44,

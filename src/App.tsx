@@ -1,5 +1,5 @@
 import { voiceService } from './utils/voiceGuidanceService';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { MapCanvas } from './components/MapCanvas';
 import { CoordHUD } from './components/CoordHUD';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -14,7 +14,9 @@ import {
   SAMPLE_ROOMS,
   SAMPLE_NAV_NODES,
   SAMPLE_NAV_EDGES,
+  SAMPLE_BEACONS,
 } from './data/sampleData';
+import type { BeaconDevice } from './types';
 
 function App() {
   const setRooms = useMapStore((s) => s.setRooms);
@@ -33,13 +35,13 @@ function App() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           useMapStore.setState({ floors: parsed, currentFloor: 1 });
         } else {
-          useMapStore.setState({ floors: SAMPLE_FLOORS.filter(f => f.id === 1), currentFloor: 1 });
+          useMapStore.setState({ floors: SAMPLE_FLOORS, currentFloor: 1 });
         }
       } else {
-        useMapStore.setState({ floors: SAMPLE_FLOORS.filter(f => f.id === 1), currentFloor: 1 });
+        useMapStore.setState({ floors: SAMPLE_FLOORS, currentFloor: 1 });
       }
     } catch {
-      useMapStore.setState({ floors: SAMPLE_FLOORS.filter(f => f.id === 1), currentFloor: 1 });
+      useMapStore.setState({ floors: SAMPLE_FLOORS, currentFloor: 1 });
     }
     
     // Khôi phục phòng đã lưu nếu admin từng sửa tên hoặc thêm phòng
@@ -61,21 +63,21 @@ function App() {
 
     setNavData(SAMPLE_NAV_NODES, SAMPLE_NAV_EDGES);
 
-    // Khôi phục danh sách Beacons đã cấu hình nếu có
+    // Khôi phục danh sách Beacons đã cấu hình nếu có (mặc định lấy SAMPLE_BEACONS)
     try {
       const savedBeacons = localStorage.getItem('inmap7a_custom_beacons');
       if (savedBeacons) {
         const parsed = JSON.parse(savedBeacons);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           setBeacons(parsed);
         } else {
-          setBeacons([]);
+          setBeacons(SAMPLE_BEACONS);
         }
       } else {
-        setBeacons([]);
+        setBeacons(SAMPLE_BEACONS);
       }
     } catch {
-      setBeacons([]);
+      setBeacons(SAMPLE_BEACONS);
     }
     // Không cố định vị trí ở thang máy nữa - để null chờ nhận vị trí từ Beacon/Người dùng chọn
     setUserPosition(null);
@@ -89,9 +91,11 @@ function App() {
       try {
         const raw = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
         if (raw && raw.type === 'BEACON_UPDATE') {
-          const currentBeacons = useMapStore.getState().beacons;
+          const currentBeacons: BeaconDevice[] = useMapStore.getState().beacons.length > 0 
+            ? useMapStore.getState().beacons 
+            : SAMPLE_BEACONS;
           if (raw.minor && currentBeacons.length > 0) {
-            const matched = currentBeacons.find((b) => b.minor === Number(raw.minor));
+            const matched = currentBeacons.find((b: BeaconDevice) => b.minor === Number(raw.minor));
             if (matched) {
               setUserPosition(matched.position);
               if (typeof matched.floor === 'number') {
@@ -284,22 +288,36 @@ function FloatingNavActions() {
     };
   }, [isNavigatingActive, path, navNodes, rooms, userPosition]);
 
+  const lastInstructionRef = useRef<string>('');
+
   useEffect(() => {
     if (!isNavigatingActive || !navInfo) {
       voiceService.stop();
+      lastInstructionRef.current = '';
       return;
     }
 
+    let instruction = '';
     if (navInfo.actionType === 'arrive') {
-      voiceService.speak(`Bạn đã đến trước cửa ${navInfo.destName}!`);
+      instruction = `Bạn đã đến trước cửa ${navInfo.destName}!`;
     } else if (navInfo.meters <= 4) {
-      voiceService.speak(`Sắp tới ${navInfo.destName}`);
+      instruction = `Sắp tới ${navInfo.destName}`;
     } else if (navInfo.actionType === 'right' || navInfo.actionType === 'left') {
-      voiceService.speak(navInfo.actionText);
+      instruction = navInfo.actionText;
     } else {
-      voiceService.speak(`${navInfo.actionText}, cách ${navInfo.meters} mét`);
+      // Chỉ thông báo một lần khi bắt đầu hành trình hoặc khi vào đoạn đường mới
+      instruction = `Đi thẳng dọc hành lang khoảng ${navInfo.meters} mét`;
     }
-  }, [isNavigatingActive, navInfo]);
+
+    // Chỉ đọc khi câu lệnh chỉ dẫn thực sự thay đổi và là các khúc ngoặt quan trọng (rẽ / đến nơi)
+    if (instruction && instruction !== lastInstructionRef.current) {
+      lastInstructionRef.current = instruction;
+      // Tránh đọc đè lên câu tóm tắt ban đầu lúc mới bấm Bắt đầu/Đi thử
+      if (navInfo.actionType === 'arrive' || navInfo.actionType === 'left' || navInfo.actionType === 'right' || navInfo.meters <= 4) {
+        voiceService.speak(instruction);
+      }
+    }
+  }, [isNavigatingActive, navInfo?.actionType, navInfo?.actionText, navInfo?.destName]);
 
   if (!navInfo) return null;
 
@@ -396,7 +414,19 @@ function FloatingNavActions() {
             }}
             title={isVoiceMuted ? 'Bật giọng nói chỉ đường' : 'Tắt tiếng chỉ đường'}
           >
-            {isVoiceMuted ? '🔇' : '🔊'}
+            {isVoiceMuted ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" />
+                <line x1="23" y1="9" x2="17" y2="15" />
+                <line x1="17" y1="9" x2="23" y2="15" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" />
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+              </svg>
+            )}
           </button>
         </div>
       </div>

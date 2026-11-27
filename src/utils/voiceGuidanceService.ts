@@ -85,6 +85,13 @@ class VoiceGuidanceService {
     };
 
     const key = trimmed.toLowerCase();
+
+    // Nếu là câu tóm tắt lộ trình chi tiết có khoảng cách mét / nhiều đoạn,
+    // bắt buộc chạy TTS để phát âm thanh đầy đủ câu, KHÔNG dùng file mp3 mẫu ngắn
+    if (key.includes(' mét') || key.includes('rồi rẽ') || key.length > 40) {
+      return null;
+    }
+
     if (map[key]) return map[key];
 
     // Khớp các câu chỉ hướng biến thể
@@ -148,13 +155,21 @@ class VoiceGuidanceService {
 
   private playViaProxy(text: string) {
     try {
-      const proxyUrl = `/api/tts?q=${encodeURIComponent(text)}`;
-      const audio = new Audio(proxyUrl);
+      // 1. Dùng Google Translate TTS trực tiếp với client=tw-ob (chuẩn phát âm tiếng Việt chất lượng cao)
+      const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encodeURIComponent(text)}`;
+      const audio = new Audio(googleTtsUrl);
       this.currentAudio = audio;
 
       audio.play().catch(() => {
-        // 3. Dự phòng cuối cùng: Web Speech API nhưng CHỈ KHI máy có giọng tiếng Việt thực sự
-        this.fallbackWebSpeech(text);
+        // 2. Dự phòng: Thử qua proxy /api/tts nếu chạy ở môi trường web dev
+        const proxyUrl = `/api/tts?q=${encodeURIComponent(text)}`;
+        const fallbackAudio = new Audio(proxyUrl);
+        this.currentAudio = fallbackAudio;
+
+        fallbackAudio.play().catch(() => {
+          // 3. Dự phòng cuối cùng: Web Speech API trên thiết bị
+          this.fallbackWebSpeech(text);
+        });
       });
     } catch {
       this.fallbackWebSpeech(text);

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Room, NavNode, NavEdge, NavigationState, Point2D, Floor, BeaconDevice } from '../types';
 import { findShortestPath } from '../utils/pathfinding';
+import { voiceService } from '../utils/voiceGuidanceService';
 
 export interface MapStoreState {
 
@@ -223,8 +224,10 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
         currentSegmentIndex += 1;
         progress = 0;
         if (currentSegmentIndex >= waypoints.length - 1) {
-          set({ userPosition: waypoints[waypoints.length - 1], isSimulatingWalk: false });
+          const finalPos = waypoints[waypoints.length - 1];
+          set({ userPosition: finalPos, isSimulatingWalk: false });
           clearInterval(interval);
+          voiceService.speak('Bạn đã đến nơi!');
           return;
         }
       }
